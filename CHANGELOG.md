@@ -4,6 +4,22 @@ All notable changes to CSAE — Continuous Session-Attested Evidence — are doc
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-05-20
+
+Walkthrough + templates shipped. Closes the broken internal links from README + PROTOCOL.md to previously-pending walkthrough.
+
+### Added
+- `examples/attestation-walkthrough.md` — end-to-end walkthrough showing eager-attestation cycle (intent → work → review → bundle → audit-mirror publish → canonical push) plus a coverage-gap recovery scenario (retroactive attestation honest about being retroactive + sub-floor). Resolves the broken internal links from README + PROTOCOL.md.
+- `templates/intent-registration-template.md` — registration commit message structure with required + optional fields and example
+- `templates/bundle-template.md` — bundle markdown file structure mapping to 9-field MUST list + naming conventions + example
+- `templates/validator-hook.sh` — pre-push hook (or CI required check) for canonical main; rejects pushes whose commits aren't covered; bypass mechanism for legitimate exceptional cases
+- `templates/audit-mirror-setup.md` — notes for setting up the separate audit-mirror repository (branch protection, key separation, write access restriction, replication, file layout, verification)
+
+### Context
+Closes the cadence inherited from PWC: review-pass → walkthrough → templates → repo creation. CSAE arc now substantively complete; subsequent revisions reactive (issues, PRs from real adopters) rather than proactive.
+
+[0.1.2]: https://github.com/moranbickel/csae/releases/tag/v0.1.2
+
 ## [0.1.1] — 2026-05-20
 
 Sharpening pass after first outside review (GPT 9.0/10) flagged three quality improvements.
@@ -32,9 +48,9 @@ Initial draft release. Private — pending outside review, walkthrough example, 
 - `README.md` — protocol overview, failure-it-solves narrative (the attribution-dispute schema-migration story), what CSAE is and is not, vs-alternatives table (ad-hoc audit / git signed commits / SLSA / Sigstore / in-toto / CSAE), composition with Russian Judge and Peer-Worker Convergence (attestation triangle framing), protocol at a glance (intent registration / bundle authoring / audit mirror + validator), worked example, four recovery scenarios, related-work survey.
 - `PROTOCOL.md` — formal specification with vocabulary, preconditions/procedure/postconditions/invariants for the three concepts, bundle field requirements (MUST/MAY/MUST NOT), validator semantics, self-attestation mechanics (non-circular argument with chain-bottoms-out-at-first-scope-claim framing), composition with verdict references and β.2 ceremony integration, six anti-patterns, four recovery scenarios expanded, explicit threat model (what CSAE defends against and doesn't), verification incantations, glossary.
 
-### Pending
-- `examples/attestation-walkthrough.md` — end-to-end walkthrough with coverage-gap recovery
-- `templates/` — intent-registration template, bundle template, validator-hook template, audit-mirror-setup notes
+### Pending (shipped in 0.1.2)
+- `examples/attestation-walkthrough.md`
+- `templates/` directory
 
 ### Context
 Fourth of six methodology pieces from ORCA — Orchestrated Reasoning for Civil Action. Composes with [Russian Judge](https://github.com/moranbickel/russian-judge) (adversarial review) and [Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence) (topology convergence). Together the three form an attestation triangle covering review-substance + commit-topology + chain-of-custody.
