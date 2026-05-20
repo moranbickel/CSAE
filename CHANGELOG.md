@@ -4,6 +4,26 @@ All notable changes to CSAE — Continuous Session-Attested Evidence — are doc
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-05-20
+
+Sharpening pass after first outside review (GPT 9.0/10) flagged three quality improvements.
+
+### Changed
+- README — operational burden in vs-alternatives table corrected from "low-medium" to "medium-high." Eager intent registration + bundle authoring + separate audit mirror + pre-push hook is materially more burden than the prior wording suggested.
+- README — new section *"Where teams actually break the chain"* (field-manual format: failure mode + signal + why broke + how to recover, for three common failure modes — forgot intent registration / landed uncovered commits / bundle published after canonical push). Positioned between worked example and Recovery; surfaces operational signals alongside the abstract anti-patterns in [`PROTOCOL.md`](./PROTOCOL.md).
+- README — new section *"When to use it — and when not to"* with sharpened audience exclusion (not for casual solo work, hobby branches, or teams already running disciplined PR review with decent retention). Positioned before Adopt-the-mechanics so readers know the audience-fit before investing.
+
+### Unchanged
+- Self-attestation mechanics framing — outside reviewer confirmed the non-circular argument lands on first read.
+- Threat model — outside reviewer confirmed the explicit out-of-scope list is the right humility posture.
+- MUST NOT bundle field list — four exclusions sufficient.
+- Path A discipline — no cryptographic-substrate recommendations added; pointers to in-toto / Sigstore / SLSA preserved.
+
+### Discipline note
+First-review score (9.0) is higher than [Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence)'s second-review score (8.9, post-corrections) and substantially higher than PWC's first review (8.6). Empirical support for the constraint-loaded-drafting hypothesis: pre-drafting constraint loading (acronym lock, scope discipline, firewall posture, structure sketch) produces measurably better first-draft quality than iteration-style drafting.
+
+[0.1.1]: https://github.com/moranbickel/csae/releases/tag/v0.1.1
+
 ## [0.1.0] — 2026-05-20
 
 Initial draft release. Private — pending outside review, walkthrough example, templates, and final polish before public flip.
@@ -15,7 +35,6 @@ Initial draft release. Private — pending outside review, walkthrough example, 
 ### Pending
 - `examples/attestation-walkthrough.md` — end-to-end walkthrough with coverage-gap recovery
 - `templates/` — intent-registration template, bundle template, validator-hook template, audit-mirror-setup notes
-- `diagram.svg` — protocol-topology diagram
 
 ### Context
 Fourth of six methodology pieces from ORCA — Orchestrated Reasoning for Civil Action. Composes with [Russian Judge](https://github.com/moranbickel/russian-judge) (adversarial review) and [Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence) (topology convergence). Together the three form an attestation triangle covering review-substance + commit-topology + chain-of-custody.

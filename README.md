@@ -46,7 +46,7 @@ And it's **not** a complete attestation solution by itself. It's one layer in a 
 | What's attested | Whatever `git log` recorded | Authorship (key held the commit) | Build provenance | Artifact provenance + transparency log | Scope claim + review verdict + self-attestation |
 | Trust root | Memory, Slack search, PRs | The key trust hierarchy | Build platform attestation | Sigstore transparency log + Fulcio | Predecessor bundle + reviewer verdict + operator scope claim |
 | Recovery from "who approved this?" | Often impossible | Author yes; reviewer no | N/A — different question | Artifact-level; commit-level limited | The bundle carries the answer |
-| Operational burden | Zero (until you need it) | Low (one config flag) | Medium-high (build infra changes) | Medium (signing + verification) | Low-medium (intent registration + bundle authoring + pre-push hook) |
+| Operational burden | Zero (until you need it) | Low (one config flag) | Medium-high (build infra changes) | Medium (signing + verification) | Medium-high (eager intent registration + bundle authoring + separate audit mirror + pre-push hook) |
 | Best for | Solo dev, low-stakes work | Teams that just want authorship | Regulated build pipelines | Open-source artifact distribution | AI-assisted teams needing commit-level provenance |
 
 CSAE doesn't replace the others; it fills the gap at the commit-landing layer that the others either don't address or address at the wrong granularity. If your project also distributes artifacts, you probably want both CSAE (commits → main) and SLSA-or-equivalent (main → release).
@@ -129,6 +129,18 @@ The answer comes back in seconds rather than archeology.
 
 ---
 
+## Where teams actually break the chain
+
+Three failure modes seen in practice often enough to surface as field-manual entries. Abstract anti-patterns live in [`PROTOCOL.md`](./PROTOCOL.md); these are the operational signals.
+
+**Forgot intent registration.** *Signal:* work commits on canonical main with no preceding registration commit; `git log --grep="<workstream-id>"` returns work but no scope claim. *Why broke:* eager-registration discipline skipped; no `C_scope` exists for any bundle to reference. *Recover:* [Stranded intent](./PROTOCOL.md#recovery-from-stranded-intent) — retroactive bundle, honest about the gap.
+
+**Landed uncovered commits on main.** *Signal:* commits on `origin/main` whose hashes don't match any bundle in the audit mirror; usually discovered when a future chain-walk hits an unattested predecessor. *Why broke:* validator was bypassed (logged or unlogged) or a force-push routed around coverage. *Recover:* [Coverage gap](./PROTOCOL.md#recovery-from-a-coverage-gap) — retroactive bundle with annotation declaring post-hoc status.
+
+**Bundle published after canonical push, not before.** *Signal:* canonical push fails with the validator's "not covered" diagnostic; bundle file exists in worker tree but isn't yet in audit mirror. *Why broke:* sequence violation — the validator reads from the audit mirror, not from the local worker tree. *Recover:* push the bundle to the audit mirror first, confirm the push succeeded, then re-attempt the canonical push. No data loss; just sequence correction.
+
+---
+
 ## Recovery
 
 CSAE has four failure modes worth naming as classes. The discipline across all of them is the same as in [PWC](https://github.com/moranbickel/peer-worker-convergence): **don't compound the failure.** A break in the chain creates a divergent state; the fix is to converge back through the protocol, not to bypass it.
@@ -140,6 +152,24 @@ CSAE has four failure modes worth naming as classes. The discipline across all o
 **Compromised key or audit-mirror tampering.** Outside CSAE's scope per the threat-model note above. Standard key-rotation discipline (see Sigstore, in-toto) and standard tamper-evident-log discipline apply. CSAE depends on the underlying primitives being sound; if they're compromised, CSAE's chain is compromised at the same point the primitives are.
 
 **Cascading break.** A break early in the chain that everything after the break references. This is the most expensive recovery. **Procedure:** mark the break explicitly with a "chain repair" bundle that names the break, declares what's recoverable downstream of it, and starts a new sub-chain from the repair bundle forward. Downstream bundles reference the repair bundle as their predecessor. The break stays visible in history; the chain continues forward with the break acknowledged rather than papered over.
+
+---
+
+## When to use it — and when not to
+
+**Use it when:**
+- Your team produces AI-assisted commits on a canonical main that may later need provenance reconstruction
+- Retention of the main branch extends past the working memory or chat-search reach of the operators
+- The cost of *"we can't reconstruct who approved this"* is higher than the ceremony cost
+- Multiple operators or AI assistants share commit authority against the same canonical main
+
+**Don't use it when:**
+- You're doing casual solo work or hobby branches — no operator-attention sharing, no retention need
+- Your team already runs disciplined PR review with decent retention — PRs and indexed search serve the same function
+- Short-lived feature branches where the audit need ends at merge
+- Experimental or scratch work where the ceremony cost outweighs the audit value
+
+The gate isn't *"do you use AI?"* It's *"will someone need to reconstruct, months later, who authorized what under whose review?"* If yes, CSAE earns its weight. If no, the ceremony cost isn't worth it.
 
 ---
 
