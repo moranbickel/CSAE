@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="monospace" font-size="13">
+  <!-- Top row: intent → work → verdict → bundle (the authoring flow) -->
+  <g stroke="#333" stroke-width="2" fill="#fff">
+    <rect x="40"  y="60" width="160" height="60" rx="4"/>
+    <rect x="260" y="60" width="160" height="60" rx="4"/>
+    <rect x="480" y="60" width="160" height="60" rx="4"/>
+    <rect x="700" y="60" width="160" height="60" rx="4"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="120" y="85">Intent</text>
+    <text x="120" y="103" fill="#666">registration</text>
+    <text x="340" y="85">Work</text>
+    <text x="340" y="103" fill="#666">commits</text>
+    <text x="560" y="85">Reviewer</text>
+    <text x="560" y="103" fill="#666">verdict</text>
+    <text x="780" y="85">Bundle</text>
+    <text x="780" y="103" fill="#666">+ self-attest</text>
+  </g>
+
+  <!-- Arrows between top row -->
+  <g stroke="#333" stroke-width="2" fill="none">
+    <line x1="200" y1="90" x2="252" y2="90"/>
+    <line x1="420" y1="90" x2="472" y2="90"/>
+    <line x1="640" y1="90" x2="692" y2="90"/>
+  </g>
+  <polygon points="252,86 252,94 260,90" fill="#333"/>
+  <polygon points="472,86 472,94 480,90" fill="#333"/>
+  <polygon points="692,86 692,94 700,90" fill="#333"/>
+
+  <!-- Bundle splits to: audit mirror (left-down) + canonical main (right-down) -->
+  <g stroke="#333" stroke-width="2" fill="none">
+    <line x1="780" y1="120" x2="780" y2="180"/>
+    <line x1="280" y1="180" x2="780" y2="180"/>
+    <line x1="280" y1="180" x2="280" y2="260"/>
+    <line x1="780" y1="180" x2="780" y2="260"/>
+  </g>
+  <polygon points="276,256 284,256 280,272" fill="#333"/>
+  <polygon points="776,256 784,256 780,272" fill="#333"/>
+
+  <!-- Bottom row: audit mirror (left) + canonical main (right) -->
+  <g stroke="#333" stroke-width="2" fill="#fafafa">
+    <rect x="120" y="280" width="320" height="100" rx="4"/>
+    <rect x="620" y="280" width="320" height="100" rx="4"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="280" y="310" font-weight="bold">Audit mirror</text>
+    <text x="280" y="332" font-size="12" fill="#666">(separate repo,</text>
+    <text x="280" y="348" font-size="12" fill="#666">append-only,</text>
+    <text x="280" y="364" font-size="12" fill="#666">distinct keys)</text>
+    <text x="780" y="310" font-weight="bold">Canonical main</text>
+    <text x="780" y="332" font-size="12" fill="#666">(validator checks</text>
+    <text x="780" y="348" font-size="12" fill="#666">audit mirror for</text>
+    <text x="780" y="364" font-size="12" fill="#666">bundle coverage)</text>
+  </g>
+
+  <!-- Connector: audit mirror feeds canonical main's validator -->
+  <line x1="440" y1="330" x2="618" y2="330" stroke="#888" stroke-width="2" stroke-dasharray="6,4" fill="none"/>
+  <polygon points="614,326 614,334 622,330" fill="#888"/>
+  <text x="529" y="320" text-anchor="middle" font-size="11" fill="#888">validator reads</text>
+
+  <!-- Caption -->
+  <text x="450" y="450" text-anchor="middle" font-size="12" fill="#888">
+    CSAE: pre-work intent → work + review → bundle authoring → audit mirror + canonical main.
+  </text>
+  <text x="450" y="468" text-anchor="middle" font-size="11" fill="#888">
+    The bundle's self-attestation commit lives inside the bundle's covered range; the audit mirror is the read side for the validator.
+  </text>
+</svg>

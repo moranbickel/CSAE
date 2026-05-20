@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this protocol or build on it, please cite it as below."
+title: "CSAE — Continuous Session-Attested Evidence: a protocol for attesting AI-generated commits to a verifiable audit chain"
+abstract: "A coordination protocol for attesting AI-generated commits to a continuous audit chain. Combines pre-work intent registration (operator scope claim), bundle authoring (links commits to reviewer verdicts and scope claim via self-attestation), audit-mirror publication (separate tamper-evident repository), and server-side validator enforcement on canonical main. Composes with adversarial review (Russian Judge) and topology convergence (Peer-Worker Convergence) for end-to-end auditability of AI-assisted work."
+authors:
+  - family-names: Bickel
+    given-names: Moran
+repository-code: "https://github.com/moranbickel/csae"
+url: "https://github.com/moranbickel/csae"
+license: CC-BY-4.0
+version: "0.1.0"
+date-released: 2026-05-20
+keywords:
+  - ai-collaboration
+  - attestation
+  - audit-trail
+  - methodology
+  - multi-agent
+  - claude-code
+  - commit-attestation
+  - provenance
+  - chain-of-custody
