@@ -40,14 +40,16 @@ And it's **not** a complete attestation solution by itself. It's one layer in a 
 
 ## CSAE vs alternatives
 
-| Dimension | Ad-hoc audit (`git log` + memory) | `git commit -S` (signed commits) | [SLSA](https://slsa.dev) | [Sigstore](https://www.sigstore.dev) / [in-toto](https://in-toto.io) | CSAE |
-|---|---|---|---|---|---|
-| Scope | Per-commit, informal | Per-commit, cryptographic | Build pipeline → artifact | Build artifact → consumer | Commit-range → canonical main |
-| What's attested | Whatever `git log` recorded | Authorship (key held the commit) | Build provenance | Artifact provenance + transparency log | Scope claim + review verdict + self-attestation |
-| Trust root | Memory, Slack search, PRs | The key trust hierarchy | Build platform attestation | Sigstore transparency log + Fulcio | Predecessor bundle + reviewer verdict + operator scope claim |
-| Recovery from "who approved this?" | Often impossible | Author yes; reviewer no | N/A — different question | Artifact-level; commit-level limited | The bundle carries the answer |
-| Operational burden | Zero (until you need it) | Low (one config flag) | Medium-high (build infra changes) | Medium (signing + verification) | Medium-high (eager intent registration + bundle authoring + separate audit mirror + pre-push hook) |
-| Best for | Solo dev, low-stakes work | Teams that just want authorship | Regulated build pipelines | Open-source artifact distribution | AI-assisted teams needing commit-level provenance |
+| Dimension | Ad-hoc audit (`git log` + memory) | `git commit -S` (signed commits) | [SLSA](https://slsa.dev) | [Sigstore](https://www.sigstore.dev) / [in-toto](https://in-toto.io) | GitHub-native CI/CD | CSAE |
+|---|---|---|---|---|---|---|
+| Scope | Per-commit, informal | Per-commit, cryptographic | Build pipeline → artifact | Build artifact → consumer | Source → merge gate → artifact | Commit-range → canonical main |
+| What's attested | Whatever `git log` recorded | Authorship (key held the commit) | Build provenance | Artifact provenance + transparency log | Workflow identity + artifact signature + "checks passed" | Scope claim + review verdict + self-attestation |
+| Trust root | Memory, Slack search, PRs | The key trust hierarchy | Build platform attestation | Sigstore transparency log + Fulcio | GitHub OIDC issuer + Fulcio/Rekor + branch-protection config | Predecessor bundle + reviewer verdict + operator scope claim |
+| Recovery from "who approved this?" | Often impossible | Author yes; reviewer no | N/A — different question | Artifact-level; commit-level limited | Review occurred (branch protection); scope/authorization not recorded | The bundle carries the answer |
+| Operational burden | Zero (until you need it) | Low (one config flag) | Medium-high (build infra changes) | Medium (signing + verification) | Low-medium (platform-provided) | Medium-high (eager intent registration + bundle authoring + separate audit mirror + pre-push hook) |
+| Best for | Solo dev, low-stakes work | Teams that just want authorship | Regulated build pipelines | Open-source artifact distribution | Teams already all-in on GitHub Actions | AI-assisted teams needing commit-level provenance |
+
+*"GitHub-native CI/CD" is the integrated stack a DevSecOps reader reaches for first: protected branches + required status checks (review happened) + keyless [Cosign](https://docs.sigstore.dev/cosign/signing/overview/) signing under the [Actions OIDC](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-security-hardening-with-openid-connect) identity (artifact tied to the workflow). See [Related work](#related-work) for where it stops and CSAE begins.*
 
 CSAE doesn't replace the others; it fills the gap at the commit-landing layer that the others either don't address or address at the wrong granularity. If your project also distributes artifacts, you probably want both CSAE (commits → main) and SLSA-or-equivalent (main → release).
 
@@ -196,6 +198,8 @@ I surveyed the field before publishing. CSAE sits in an active area; the closest
 **[in-toto](https://in-toto.io)** is the closest sibling — an attestation framework for software supply chains with a chain-of-custody model that generalizes well. CSAE could be implemented as an in-toto layout; the differences are scope (CSAE is commit-level, in-toto spans pipelines) and audience (CSAE targets AI-assisted teams; in-toto targets supply-chain security teams). If you adopt CSAE and need broader supply-chain attestation, in-toto is the natural next layer.
 
 **[Sigstore](https://www.sigstore.dev)** provides signing infrastructure (Cosign for artifacts, Gitsign for commits) and a transparency log (Rekor). CSAE chains can be cryptographically grounded in Sigstore primitives — the bundle itself can be a Cosign-signed artifact, the audit mirror can be a Rekor entry. CSAE is the methodology; Sigstore is one possible implementation substrate.
+
+**GitHub-native CI/CD (Actions OIDC + keyless Cosign + protected branches)** is the integrated stack a DevSecOps engineer reaches for first, and the closest thing to a turnkey alternative. Protected branches with required status checks enforce that review happened before a merge; keyless [Cosign](https://docs.sigstore.dev/cosign/signing/overview/) signing under the workflow's [OIDC](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-security-hardening-with-openid-connect) identity ties an artifact to the pipeline that produced it; Rekor logs it. It's strong, low-friction, and the right default if you already live in GitHub Actions. Where it stops is CSAE's specific binding: branch protection attests *that a review occurred*, not *that this was the scope authorized before any code was written*, and the platform's provenance is artifact-centric — it doesn't record the *commit-range → canonical-main* correspondence to a named reviewer verdict at the granularity CSAE chains. It also couples the audit trail to GitHub. CSAE is platform-neutral methodology that sits on top of exactly these primitives: use Actions OIDC + Cosign as the substrate, and CSAE for the scope-claim / verdict / commit-range binding the platform leaves implicit.
 
 **[SLSA](https://slsa.dev)** (Supply-chain Levels for Software Artifacts) is broader-scope than CSAE — it addresses build provenance from source to deployment. CSAE addresses the source-to-main slice that SLSA largely assumes is solved. The two are complementary; teams running both get end-to-end attestation from operator intent through deployed artifact.
 

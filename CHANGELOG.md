@@ -4,6 +4,11 @@ All notable changes to CSAE — Continuous Session-Attested Evidence — are doc
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- README — *vs-alternatives* table gains a **GitHub-native CI/CD** column (Actions OIDC + keyless Cosign + protected branches), the integrated stack a DevSecOps reader reaches for first, plus a Related-work entry that concedes its strengths and names the precise gap CSAE fills (scope-claim-before-work + commit-range→canonical binding to a named verdict; platform-neutral). Closes systemic-review finding S-6.
+
 ## [0.1.2] — 2026-05-20
 
 Walkthrough + templates shipped. Closes the broken internal links from README + PROTOCOL.md to previously-pending walkthrough.
