@@ -220,7 +220,7 @@ This is the fourth of six methodology pieces from building [ORCA](#about-orca):
 
 ## About ORCA
 
-ORCA — Orchestrated Reasoning for Civil Action — is an AI legal reasoning system I'm building for Israeli civil litigation. The system is closed-source; the methodology that produced it is open. This repo publishes the coordination methodology, not ORCA's product internals — no source code, knowledge bases, prompts, customer data, or implementation roadmap.
+ORCA — Orchestrated Reasoning for Civil Action — is an AI legal reasoning system I'm building for Israeli civil litigation. It's a decision system, not a document generator: it reasons about which causes of action hold, which elements the evidence supports, and what relief follows. A programmer builds a document generator; a litigator builds a decision system. The system is closed-source; the methodology that produced it is open. This repo publishes the attestation methodology, not ORCA's product internals — no source code, knowledge bases, prompts, customer data, or implementation roadmap.
 
 See my [GitHub profile](https://github.com/moranbickel) for the full body of work and how to follow ORCA's progress.
 
