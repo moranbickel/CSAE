@@ -22,7 +22,7 @@ Closes the cadence inherited from PWC: review-pass → walkthrough → templates
 
 ## [0.1.1] — 2026-05-20
 
-Sharpening pass after first outside review (GPT 9.0/10) flagged three quality improvements.
+Sharpening pass after a first outside review flagged three quality improvements.
 
 ### Changed
 - README — operational burden in vs-alternatives table corrected from "low-medium" to "medium-high." Eager intent registration + bundle authoring + separate audit mirror + pre-push hook is materially more burden than the prior wording suggested.
@@ -36,7 +36,7 @@ Sharpening pass after first outside review (GPT 9.0/10) flagged three quality im
 - Path A discipline — no cryptographic-substrate recommendations added; pointers to in-toto / Sigstore / SLSA preserved.
 
 ### Discipline note
-First-review score (9.0) is higher than [Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence)'s second-review score (8.9, post-corrections) and substantially higher than PWC's first review (8.6). Empirical support for the constraint-loaded-drafting hypothesis: pre-drafting constraint loading (acronym lock, scope discipline, firewall posture, structure sketch) produces measurably better first-draft quality than iteration-style drafting.
+A working hypothesis from this drafting process: loading constraints up front (acronym lock, scope discipline, firewall posture, structure sketch) seemed to produce a cleaner first draft than iterating from a rough one. That's an impression from a single project with self-selected review — a hypothesis worth testing, not a measured result.
 
 [0.1.1]: https://github.com/moranbickel/csae/releases/tag/v0.1.1
 
