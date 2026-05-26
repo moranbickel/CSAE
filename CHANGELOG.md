@@ -53,7 +53,7 @@ Initial draft release. Private — pending outside review, walkthrough example, 
 - `templates/` directory
 
 ### Context
-Fourth of six methodology pieces from ORCA — Orchestrated Reasoning for Civil Action. Composes with [Russian Judge](https://github.com/moranbickel/russian-judge) (adversarial review) and [Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence) (topology convergence). Together the three form an attestation triangle covering review-substance + commit-topology + chain-of-custody.
+One of a series of methodology pieces from ORCA — Orchestrated Reasoning for Civil Action. Composes with [Russian Judge](https://github.com/moranbickel/russian-judge) (adversarial review) and [Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence) (topology convergence). Together the three form an attestation triangle covering review-substance + commit-topology + chain-of-custody.
 
 Authored at Path A discipline level: methodology + workflow + invariants, no specific cryptographic-substrate recommendations. Point at [in-toto](https://in-toto.io), [Sigstore](https://www.sigstore.dev), and [SLSA](https://slsa.dev) for primitive layer.
 
