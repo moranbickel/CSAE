@@ -96,6 +96,12 @@ Be precise about what that buys you. "Non-circular" means no link needs itself o
 
 **Mechanical enforcement: the validator.** A pre-push hook on the canonical main (or equivalent CI-level required check) verifies that every commit being pushed is covered by an attested bundle that's already in the audit mirror. Pushes that fail coverage are rejected. The operator's bypass (for legitimate exceptional cases — release tags, manual recovery, ceremonial commits) is intentionally awkward and produces a logged bypass record that becomes itself an audit-chain entry.
 
+**Three integrity properties on top of the core loop** (formal treatment in [`PROTOCOL.md`](./PROTOCOL.md)):
+
+- **Detached-mirror publishing.** The audit-mirror push runs from a dedicated, ref-isolated worktree in a detached-HEAD state at the canonical tip — decoupled from the working clone, so the audit trail never stalls behind a dirty or mid-ceremony working tree. (§"Audit mirror" → "Detached-mirror publishing".)
+- **Closure-SHA canonical binding.** When a work-item is recorded as closed "verified by commit X," the cited SHA must be an ancestor of the canonical branch, and the closure note is authored *after* the merge — so it cites the canonical commit, not a pre-merge working-branch SHA that evaporates via cherry-pick or rebase. (§"Closure-SHA canonical binding".)
+- **No-vacuous-attestation floor.** A closure orchestrator conforms the review receipts to the bundle schema and refuses to attest an empty range, a placeholder verdict, or an aggregate that doesn't meet floor — an attestation must cover real work bound to a named verdict. (§"Closure orchestration and the no-vacuous-attestation floor".)
+
 ---
 
 ## A worked example

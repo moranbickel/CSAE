@@ -144,6 +144,35 @@ The canonical push lands. Audit chain extended by one bundle.
 
 ---
 
+## Recording the closure — after the merge, citing the canonical SHA
+
+The `ws-auth-refactor` work was tracking a backlog item: *"extract OAuth flow to service-boundary."* alice now marks it closed. The discipline: she records the closure **after** the canonical push, and cites the **canonical** commit — not the working-branch commit she made earlier.
+
+This matters because the convergence ceremony cherry-picked her work onto a side-branch from canonical main. The working-branch commit `7e8f9a0` and its canonical twin have the same diff, author, and message — but different hashes. The canonical twin is what's actually an ancestor of canonical main; `7e8f9a0` will evaporate when alice cleans up her working branch.
+
+So before recording the closure SHA, alice verifies the ancestry:
+
+```bash
+# The canonical twin of the self-attestation commit, now on canonical main:
+$ git rev-parse origin/main
+9f0a1b2  # the canonical twin (post-cherry-pick), not 7e8f9a0
+
+$ git merge-base --is-ancestor 9f0a1b2 origin/main && echo "ancestor ✓"
+ancestor ✓
+```
+
+She records the closure note citing `9f0a1b2`, the canonical commit — bound to the verdict the bundle already references:
+
+```
+ws-auth-refactor: CLOSED — extract OAuth flow to service-boundary.
+verified by canonical commit 9f0a1b2 (ancestor of canonical main),
+under verdict c3d4e5f (score 9.4, pass at floor), bundle bundle_X10.
+```
+
+Had alice authored this note *before* the merge — citing `7e8f9a0` — the citation would have died with her working branch, and a future audit would find a closure SHA that exists nowhere. Land first, cite second.
+
+---
+
 ## Three days later — coverage gap surfaces
 
 alice is reviewing a different workstream and walks the chain backward to verify a recent bundle's predecessor. The walk hits a coverage gap at commit `4f5e6d7` (from 2026-05-12, a prior session).
@@ -228,13 +257,15 @@ A future audit walking the chain sees the gap was filled with explicit honesty a
 
 ## What was non-obvious
 
-Three moves in this walkthrough are worth calling out because they're easy to get wrong:
+Four moves in this walkthrough are worth calling out because they're easy to get wrong:
 
 **1. Eager-registration preceded any substantive work.** If alice had registered intent after the work was done, the scope claim would be description, not authorization. The temporal property is what makes the chain load-bearing.
 
 **2. Bundle pushed to audit mirror *before* canonical push.** The validator reads from the audit mirror, not from alice's worker tree. Reverse the order and the canonical push fails. The sequence is non-negotiable.
 
-**3. Retroactive attestation was honest about being retroactive.** The annotation field declares post-hoc status + sub-floor verdict. Pretending the chain was never broken would be worse than acknowledging the break. Audit value preserved at lower confidence rather than fake confidence.
+**3. The closure note cited the *canonical* SHA, authored *after* the merge.** The convergence ceremony cherry-picked the work, so the working-branch SHA became a content-twin that evaporates. Citing it before the merge would have left a dead closure SHA. Land first, cite second; verify the ancestry before recording.
+
+**4. Retroactive attestation was honest about being retroactive.** The annotation field declares post-hoc status + sub-floor verdict. Pretending the chain was never broken would be worse than acknowledging the break. Audit value preserved at lower confidence rather than fake confidence.
 
 The whole eager-attestation cycle (intent → work → review → bundle → mirror push → canonical push) took about 5 minutes of operator action on top of the actual work. The retroactive repair took about 20 minutes including the post-hoc review. The chain is now whole.
 
