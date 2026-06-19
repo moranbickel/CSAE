@@ -24,6 +24,9 @@ This document specifies invariants and workflow shape. It does not specify crypt
 | **Validator** | A pre-push hook or required status check on canonical main that rejects pushes whose commits aren't covered. |
 | **Floor** | The minimum acceptable verdict standard (defined per project — typically a numeric score plus a defect-class threshold). |
 | **Bypass** | A logged exception that allows a push without bundle coverage. Bypasses are themselves audit-chain entries. |
+| **Closure** | The act of recording that a work-item (a tracked task, backlog row, or milestone) is *verified-and-done*, citing the commit(s) that close it. A closure note is authored after the work lands on canonical main and cites the canonical commit, not a pre-merge working-branch SHA. |
+| **Closure SHA** | A commit cited in a closure note as the verification for a closed work-item. Its integrity property: it MUST be an ancestor of the canonical branch (see Closure-SHA canonical binding). |
+| **Mirror worktree** | A dedicated, ref-isolated working tree used only to publish to the audit mirror. Checked out in a detached-HEAD state at the canonical branch tip; its pushes never advance the working repository's branch refs. |
 
 ---
 
@@ -109,6 +112,27 @@ This document specifies invariants and workflow shape. It does not specify crypt
 - No history rewriting on the audit mirror (no `--force` push, no branch deletion, no bundle modification once committed)
 - Bundles are additive only; corrections take the form of new bundles that reference and explain (see Recovery)
 - The audit mirror's read-side is stable; consumers can rely on bundle URLs/hashes being permanent
+
+### Detached-mirror publishing
+
+The audit-mirror push SHOULD be issued from a **dedicated mirror worktree** that is decoupled from the working clone, rather than from whatever branch the working clone happens to have checked out. This hardens the key/write separation the audit mirror depends on and removes a coupling that otherwise blocks the audit push behind the working repo's branch state.
+
+**The problem it solves.** When the audit-mirror publish runs from the working clone, it inherits that clone's state: if the working clone is dirty, behind, or mid-ceremony on a feature branch, the publish stalls or has to be deferred. The audit trail — which is supposed to be the most durable, least-coupled artifact in the system — ends up gated on the most volatile one. Teams that defer the publish "until the working tree is clean" accumulate an audit-publish backlog, which is exactly the coverage-gap class the protocol exists to prevent.
+
+**The mechanism.** Provision a separate worktree (sharing the primary repo's object store, so it costs no extra clone) checked out in a **detached-HEAD** state at the canonical branch tip. Publish from there:
+
+1. The mirror worktree is reset clean and re-detached at the canonical tip before each publish (it carries no carried-over local state).
+2. The bundle commit lands on the *detached HEAD*.
+3. The push targets the canonical branch explicitly (`HEAD:main`), advancing the audit mirror's branch — **never** the working clone's local branch ref.
+
+**Why detached, specifically.** Worktrees of one repository share branch refs. If the mirror worktree were checked out *on* the canonical branch and advanced it, it would move the canonical ref out from under the working clone that also has it checked out, corrupting that clone's view. A detached HEAD touches no branch ref: the working clone is untouched, and the audit publish can run at any time regardless of the working clone's state. The mirror worktree shares the object store (lightweight; no multi-gigabyte second clone) but isolates the ref.
+
+**Invariants (detached-mirror specific):**
+- The mirror worktree's HEAD is detached for the duration of the publish — a publish issued from a worktree that is *attached* to the canonical branch is refused, because it would advance the shared branch ref.
+- The mirror push advances only the audit mirror's canonical branch; it never reattaches or advances the working clone's local branch ref.
+- The mirror worktree is reset-clean and re-detached at the canonical tip before each publish; it is a transient publishing host, not a place to do work.
+
+The legacy flow — publishing from a sibling clone of the working repo with the canonical branch checked out — remains valid for single-clone setups where no working clone shares the branch ref. The detached-mirror approach is the recommended default once more than one worktree shares the repository.
 
 ---
 
@@ -216,6 +240,83 @@ The chain extends one link forward by referencing one link backward. The chain's
 
 ---
 
+## Closure-SHA canonical binding
+
+A bundle attests *that a commit range was reviewed under a verdict*. A **closure** is the adjacent act of recording *that a tracked work-item is verified-and-done, by citing the commit that closed it*. The two are different artifacts — a bundle lives in the audit mirror; a closure note lives wherever the project tracks work (a backlog row, an issue, a milestone record) — but they share a failure mode, and closure adds one integrity property the chain must hold.
+
+**The integrity property.** When a closure note cites a commit as the verification for a closed work-item, the cited commit MUST be an ancestor of the canonical branch, and the closure note MUST be authored *after* the work has landed on canonical main. The note cites the **canonical** commit, never a pre-merge working-branch SHA.
+
+**Why this matters — the SHA-evaporation failure.** Convergence ceremonies that reach canonical main via cherry-pick or rebase (rather than a fast-forward of the exact working-branch commits) produce *content-identical-but-different* SHAs on the canonical branch. The working-branch commit `W` and its canonical twin `C` have the same diff, author, and message — but different hashes. If a closure note is authored *before* the merge and cites `W`, that SHA evaporates the moment the working branch is cleaned up: `W` is no longer an ancestor of anything, and a future audit asking "is the commit that closed this work-item real and on canonical main?" finds a SHA that exists nowhere. The work was real; the citation is dead.
+
+The fix is sequencing, not new machinery:
+
+1. **Land first, cite second.** The work converges onto canonical main (through whatever ceremony the project uses). Only then is the closure note authored.
+2. **Cite the canonical twin.** The closure note cites `C` (the ancestor of canonical main), not `W` (the working-branch commit that produced it).
+3. **Verify the ancestry at write time.** Before recording a closure SHA, confirm it is an ancestor of the canonical branch. A SHA that fails the ancestry check is either a pre-merge working-branch SHA (cite its canonical twin instead) or a transcription error (correct it).
+
+**Binding closure to the chain by construction.** A bundle's covered commit range, once the bundle's canonical push has landed, *is* a set of canonical commits by construction — every commit in `[C_scope..C_attest]` is an ancestor of canonical main at that point. A closure note that derives its cited SHA from the just-landed bundle's covered range therefore satisfies the canonical-binding property automatically: the closure SHA is canonical because it came from the post-landing range, and it is bound to a named verdict because the bundle that contains it references one. Authoring closures *from the bundle's post-landing range* makes the ancestry property hold by construction rather than by after-the-fact audit.
+
+**Invariants:**
+- A closure SHA is an ancestor of the canonical branch (verifiable: the ancestry check passes for every cited closure SHA).
+- A closure note is authored after the work lands on canonical main, not before. A pre-merge closure annotation uses a *pending* marker ("verified locally; canonical SHA to be cited after convergence") and cites no SHA until the canonical commit exists.
+- A closure SHA traces to a named verdict (directly, or via the bundle whose covered range contains it). A closure citing a commit that no bundle covers is a coverage-gap signal, not a valid closure.
+
+**Relationship to retroactive attestation.** A pre-merge SHA discovered in an already-written closure note is a content-twin remediation, not a chain break: edit the note in place to cite the canonical twin (matching author + date + diff). This is cheaper than the coverage-gap recovery and should be applied whenever an audit surfaces a non-canonical closure SHA.
+
+---
+
+## Closure orchestration and the no-vacuous-attestation floor
+
+The deterministic tail of a convergence-plus-attestation cycle — conform the review receipts, author the bundle, publish to the audit mirror, record the closures — is mechanizable. A **closure orchestrator** chains those steps into one fail-closed sequence and stops at the irreducibly-human boundaries. Its load-bearing contribution is a single gate: it refuses to produce a *vacuous attestation*.
+
+### What a vacuous attestation is
+
+A vacuous attestation is one whose form is valid but whose substance is empty:
+
+- A bundle authored over an **empty commit range** — nothing was actually attested.
+- A bundle authored with **no verdict reference**, or a placeholder verdict that names no real reviewer artifact — nothing was actually reviewed.
+- A closure recorded against an **aggregate verdict that does not meet floor** but is presented as if it passed — the attestation claims a standard it didn't meet.
+
+Each of these produces a chain entry that *looks* like a clean attestation and carries no information. At audit time, a vacuous attestation is worse than a missing one: the missing one prompts the question, the vacuous one silently answers it wrong.
+
+### The floor gate
+
+The orchestrator enforces, before it will author anything:
+
+1. **Non-empty range.** The commit range being attested is real and non-empty. An empty range is a fail-closed halt.
+2. **Named verdict, not placeholder.** At least one verdict reference resolves to a real review artifact (not a placeholder, not an empty path). No verdict references → fail-closed halt: *refusing to attest an empty closure.*
+3. **Aggregate meets floor.** When multiple review rounds or review lanes feed one closure, the orchestrator aggregates the *terminal* verdict of each lane (the last round in each review chain) and checks the aggregate against the floor. A below-floor aggregate is recorded *truthfully* (the closure note declares the sub-floor status) — it is never silently presented as a pass. An aggregate that carries unresolved Critical/Important defects is a fail-closed halt: the closure does not proceed until the defects clear or the operator explicitly accepts a documented exception.
+
+The floor gate keys off lane *terminals*, not every receipt: a clean terminal round passes even when an earlier round in the same lane failed (the failure is in the chain and visible; the lane ended at floor).
+
+### Receipt conformance
+
+Reviewers often author verdicts in a reviewer-native shape (a score, a round marker, a free-form verdict line) that omits fields the bundle schema requires. The orchestrator **conforms** each receipt to the bundle schema before authoring, deriving the missing bundle fields *truthfully* from what the receipt already states:
+
+- The pass/fail assertion is **derived** from the score and defect counts against the floor — never copied from the reviewer's own hand-assertion. (A reviewer who writes "pass" on a sub-floor score does not get a passing bundle; the derived assertion overrides the claim.)
+- The score and defect counts are **read** from the receipt's own fields, with a fallback to the receipt's verdict line.
+- Conformance is **surgical**: it inserts the missing fields without rewriting the receipt's untouched content. It never round-trips the receipt through a serializer that would strip comments or reflow the file.
+- Conformance **fails closed** on anything it cannot determine without fabricating judgment — a missing verdict identity, an unparseable score, a duplicate key whose authoritative value is ambiguous. It conforms a below-floor round *truthfully* (asserting non-pass); it does not gate it away.
+
+### SHA canonicalization at closure time
+
+When the convergence ceremony rebased or cherry-picked the work, the receipts were authored against pre-merge working-branch SHAs that have since evaporated (see Closure-SHA canonical binding). The orchestrator **canonicalizes** each receipt's cited range to the post-merge canonical range before authoring the bundle — so the SHAs the bundle attests, and the SHAs any derived closure cites, are the canonical ones. Without this step, a SHA-consistency check would correctly flag the stale working-branch SHAs as fabrication candidates; the canonicalization is what makes the check pass *honestly* rather than by disabling it.
+
+### Human boundaries (preview-only)
+
+The orchestrator automates the deterministic tail and **stops** at the steps that require human judgment, emitting a preview rather than executing them:
+
+- The **commit-selection** that precedes the orchestrator (which commits belong to this workstream) is the operator's precondition, not the orchestrator's job.
+- The **work-item state flip** (marking a tracked item done) previews the closure line but does not flip the state — a human verifies the closure premise and flips it.
+- The **narrative wrapper** (the human-readable session summary) previews a stub for the operator to fill.
+
+**Safety invariants:**
+- Dry-run is the default and is side-effect-free. Execution is opt-in.
+- Fail-closed: a non-zero step halts the chain; downstream steps do not run; the failing step is recorded.
+- The state flip and narrative wrapper are never executed — only previewed.
+
+---
+
 ## Composition with Russian Judge verdicts and Peer-Worker Convergence bundles
 
 ### Verdict references
@@ -247,7 +348,7 @@ You can run CSAE without RJ (informal review feeds verdict references; the verdi
 
 ## Anti-patterns
 
-Six anti-patterns. Each names what people try, why it fails, what to do instead.
+Eight anti-patterns. Each names what people try, why it fails, what to do instead.
 
 ### 1. "I'll register intent at session end after I know what shipped."
 
@@ -296,6 +397,22 @@ Six anti-patterns. Each names what people try, why it fails, what to do instead.
 **Why it fails:** embedding creates the appearance of self-evidence (the bundle "contains" the verdict) but undermines the separation between work-attestation (bundle) and review-attestation (verdict). The verdict has its own signing key, its own integrity, its own attestation chain. Embedding collapses two layers into one and breaks the property that the validator can check the verdict's freshness and integrity independently.
 
 **What to do instead:** the bundle references the verdict by content hash + path. The validator resolves the reference at check time. The verdict and the bundle stay separately auditable.
+
+### 7. "I'll write the closure note now and cite the commit I just made on my working branch."
+
+**What people try:** record a work-item as closed, citing the working-branch commit, before the work has converged onto canonical main.
+
+**Why it fails:** if the convergence ceremony cherry-picks or rebases, the working-branch SHA becomes a content-identical-but-different canonical twin and the cited SHA evaporates when the working branch is cleaned up. A future audit asking "is the commit that closed this real and on canonical main?" finds a SHA that exists nowhere. The work was real; the citation is dead.
+
+**What to do instead:** land first, cite second. Author the closure note *after* the work reaches canonical main, and cite the canonical commit (the ancestor of canonical main), not the working-branch commit. Verify the ancestry before recording the SHA. If you must annotate a closure before convergence, use a *pending* marker and cite no SHA until the canonical commit exists. (See Closure-SHA canonical binding.)
+
+### 8. "I'll author the bundle even though the range is empty / the verdict is a placeholder; the chain entry is what matters."
+
+**What people try:** produce a chain entry to keep the cadence going, over an empty commit range or with a placeholder verdict reference, intending to "fill it in later."
+
+**Why it fails:** a vacuous attestation is worse than a missing one. The missing entry prompts the audit question; the vacuous entry silently answers it wrong — it looks like a clean attestation and carries no information. A chain that accumulates vacuous entries is a chain whose pass entries can't be trusted on their face.
+
+**What to do instead:** the floor gate refuses to author over an empty range, with no real verdict, or with an aggregate that doesn't meet floor. If there is genuinely nothing to attest, author nothing. If the work is real but below floor, attest it *truthfully* — the closure note declares the sub-floor status rather than presenting it as a pass. (See Closure orchestration and the no-vacuous-attestation floor.)
 
 ---
 

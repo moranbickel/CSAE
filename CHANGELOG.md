@@ -6,8 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-06-19
+
+Three protocol-level integrity properties added on top of the core loop — detached-mirror publishing, closure-SHA canonical binding, and the no-vacuous-attestation floor — plus the previously-unreleased vs-alternatives column. Additive throughout (no breaking changes to the bundle schema, validator semantics, or recovery procedures); minor version bump per SemVer.
+
 ### Added
+- `PROTOCOL.md` — new §"Closure-SHA canonical binding": a closure SHA cited as verification for a closed work-item MUST be an ancestor of the canonical branch, and the closure note is authored *after* the work lands on canonical main (cites the canonical commit, not a pre-merge working-branch SHA that evaporates via cherry-pick/rebase). Documents the SHA-evaporation failure, the land-first/cite-second sequencing, binding-to-the-chain-by-construction (closures derived from the bundle's post-landing range), three invariants, and the content-twin remediation path.
+- `PROTOCOL.md` — new §"Closure orchestration and the no-vacuous-attestation floor": a fail-closed orchestrator for the deterministic tail (conform receipts → author bundle → publish → record closures) that refuses to attest an empty range, a placeholder verdict, or a below-floor aggregate. Defines what a vacuous attestation is, the three-part floor gate (non-empty range / named-not-placeholder verdict / aggregate-meets-floor keyed off lane terminals), truthful receipt conformance (derived pass/fail, surgical field insertion, fail-closed on un-derivable fields), SHA canonicalization at closure time, and the preview-only human boundaries.
+- `PROTOCOL.md` — new §"Detached-mirror publishing" under §"Audit mirror": the audit-mirror push SHOULD run from a dedicated ref-isolated worktree in a detached-HEAD state at the canonical tip, decoupled from the working clone. Documents the publish-stalls-behind-working-tree problem, the detached-HEAD mechanism (push `HEAD:main`, never advance the working clone's branch ref), why-detached-specifically (shared refs), and detached-mirror-specific invariants. Legacy sibling-clone flow preserved for single-clone setups.
+- `PROTOCOL.md` — vocabulary gains *Closure*, *Closure SHA*, *Mirror worktree*; anti-patterns expand from six to eight (#7 pre-merge working-branch SHA in a closure note; #8 vacuous attestation over an empty range / placeholder verdict).
+- `README.md` — *at-a-glance* section gains a "three integrity properties on top of the core loop" block summarizing detached-mirror publishing, closure-SHA canonical binding, and the no-vacuous-attestation floor, each cross-linked to its `PROTOCOL.md` section.
+- `templates/audit-mirror-setup.md` — new §"Publishing to the mirror: the detached mirror worktree": why-publish-from-detached, provision/reset commands, the `HEAD:main` push, and the three publishing invariants (refuse-attached-HEAD, push-not-advance-local-ref, reset-clean-before-each-publish). Legacy sibling-clone flow noted as valid for single-clone setups.
+- `examples/attestation-walkthrough.md` — new "Recording the closure" step demonstrating the canonical-binding property end-to-end (ancestry verification before citation; cite the canonical twin, not the working-branch SHA); "What was non-obvious" expands from three moves to four.
 - README — *vs-alternatives* table gains a **GitHub-native CI/CD** column (Actions OIDC + keyless Cosign + protected branches), the integrated stack a DevSecOps reader reaches for first, plus a Related-work entry that concedes its strengths and names the precise gap CSAE fills (scope-claim-before-work + commit-range→canonical binding to a named verdict; platform-neutral). Closes systemic-review finding S-6.
+
+### Note
+- `diagram.svg` was not updated in this release; the architecture diagram does not yet depict detached-mirror publishing or the closure tail. Follow-up.
+
+[0.2.0]: https://github.com/moranbickel/csae/releases/tag/v0.2.0
 
 ## [0.1.2] — 2026-05-20
 
