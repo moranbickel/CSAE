@@ -18,7 +18,7 @@ This walkthrough shows the full eager-attestation cycle (intent → work → rev
 
 The codebase already runs CSAE in production: pre-push validator on canonical main, audit mirror in place, intent-registration discipline established.
 
-Tool names in this walkthrough (`csae-register-intent`, `csae-author-bundle`, `csae-publish-bundle`, `csae-verify`) are illustrative — every team implementing CSAE will have similarly-shaped tooling with different specific names.
+Tool names in this walkthrough (`csae-register-intent`, `csae-author-bundle`, `csae-publish-bundle`, `csae-verify`) are illustrative. Every team implementing CSAE will have similarly-shaped tooling with different specific names.
 
 ---
 
@@ -32,7 +32,7 @@ $ csae-register-intent --workstream ws-auth-refactor \
 [csae-reg] commit_A0 = a1b2c3d (workstream: ws-auth-refactor)
 ```
 
-The registration produces commit `a1b2c3d` on alice's worker branch. The commit message embeds the workstream ID, intent statement, operator identifier, and timestamp. This is the scope claim — the *what was authorized* boundary that precedes the work.
+The registration produces commit `a1b2c3d` on alice's worker branch. The commit message embeds the workstream ID, intent statement, operator identifier, and timestamp. This is the scope claim: the *what was authorized* boundary that precedes the work.
 
 `git log --oneline` shows just one commit so far:
 ```
@@ -54,7 +54,7 @@ u6v7w8x - api/middleware/auth: route to new oauth module
 y9z0a1b - docs: update OAuth section of API reference
 ```
 
-The work spans the auth-refactor scope. None of these commits are on canonical main yet — they live on alice's worker branch.
+The work spans the auth-refactor scope. None of these commits are on canonical main yet; they live on alice's worker branch.
 
 ---
 
@@ -102,7 +102,7 @@ The bundle file (in alice's worker tree, ready to push to the audit mirror) cont
 - Verdict reference (`verdict c3d4e5f`)
 - Scope-claim hash from `a1b2c3d`
 
-The covered range is now `a1b2c3d..7e8f9a0` — registration + work + fix-up + self-attestation, with the self-attestation commit *inside* the range it attests (the load-bearing self-include property).
+The covered range is now `a1b2c3d..7e8f9a0`: registration + work + fix-up + self-attestation, with the self-attestation commit *inside* the range it attests (the load-bearing self-include property).
 
 ---
 
@@ -146,9 +146,9 @@ The canonical push lands. Audit chain extended by one bundle.
 
 ## Recording the closure — after the merge, citing the canonical SHA
 
-The `ws-auth-refactor` work was tracking a backlog item: *"extract OAuth flow to service-boundary."* alice now marks it closed. The discipline: she records the closure **after** the canonical push, and cites the **canonical** commit — not the working-branch commit she made earlier.
+The `ws-auth-refactor` work was tracking a backlog item: *"extract OAuth flow to service-boundary."* alice now marks it closed. The discipline: she records the closure **after** the canonical push, and cites the **canonical** commit, not the working-branch commit she made earlier.
 
-This matters because the convergence ceremony cherry-picked her work onto a side-branch from canonical main. The working-branch commit `7e8f9a0` and its canonical twin have the same diff, author, and message — but different hashes. The canonical twin is what's actually an ancestor of canonical main; `7e8f9a0` will evaporate when alice cleans up her working branch.
+This matters because the convergence ceremony cherry-picked her work onto a side-branch from canonical main. The working-branch commit `7e8f9a0` and its canonical twin have the same diff, author, and message, but different hashes. The canonical twin is what's actually an ancestor of canonical main; `7e8f9a0` will evaporate when alice cleans up her working branch.
 
 So before recording the closure SHA, alice verifies the ancestry:
 
@@ -161,7 +161,7 @@ $ git merge-base --is-ancestor 9f0a1b2 origin/main && echo "ancestor ✓"
 ancestor ✓
 ```
 
-She records the closure note citing `9f0a1b2`, the canonical commit — bound to the verdict the bundle already references:
+She records the closure note citing `9f0a1b2`, the canonical commit, bound to the verdict the bundle already references:
 
 ```
 ws-auth-refactor: CLOSED — extract OAuth flow to service-boundary.
@@ -169,7 +169,7 @@ verified by canonical commit 9f0a1b2 (ancestor of canonical main),
 under verdict c3d4e5f (score 9.4, pass at floor), bundle bundle_X10.
 ```
 
-Had alice authored this note *before* the merge — citing `7e8f9a0` — the citation would have died with her working branch, and a future audit would find a closure SHA that exists nowhere. Land first, cite second.
+Had alice authored this note *before* the merge (citing `7e8f9a0`), the citation would have died with her working branch, and a future audit would find a closure SHA that exists nowhere. Land first, cite second.
 
 ---
 
@@ -192,7 +192,7 @@ $ csae-audit-log --filter bypass --range 2026-05-10..2026-05-15
 [csae-audit-log] no bypass-records in range
 ```
 
-No logged bypass. This is an *unlogged* gap — either the validator was misconfigured at the time, or the pre-push hook was disabled locally before the push. The chain has a hole.
+No logged bypass. This is an *unlogged* gap: either the validator was misconfigured at the time, or the pre-push hook was disabled locally before the push. The chain has a hole.
 
 ---
 
@@ -200,11 +200,11 @@ No logged bypass. This is an *unlogged* gap — either the validator was misconf
 
 alice files the gap as a coverage-gap recovery per [`PROTOCOL.md`](../PROTOCOL.md) §"Recovery from a coverage gap":
 
-**1. Identify the gap.** `4f5e6d7` and two adjacent commits (`5g6h7i8`, `6j7k8l9`) — three commits total in the uncovered range.
+**1. Identify the gap.** `4f5e6d7` and two adjacent commits (`5g6h7i8`, `6j7k8l9`), three commits total in the uncovered range.
 
 **2. Determine the reason.** Unlogged. Worth noting in the recovery bundle's annotation field.
 
-**3. Conduct post-hoc review.** alice dispatches a Code RJ on the gap range. The reviewer returns a verdict at score 8.7 — below the standard floor of 9.0. The verdict is recorded *with this lower score*; the recovery bundle's annotation will explicitly declare that the post-hoc verdict didn't meet floor.
+**3. Conduct post-hoc review.** alice dispatches a Code RJ on the gap range. The reviewer returns a verdict at score 8.7, below the standard floor of 9.0. The verdict is recorded *with this lower score*; the recovery bundle's annotation will explicitly declare that the post-hoc verdict didn't meet floor.
 
 **4. Author retroactive bundle:**
 
