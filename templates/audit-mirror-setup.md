@@ -9,27 +9,27 @@ See [`PROTOCOL.md`](../PROTOCOL.md) §"Audit mirror" for formal invariants.
 The audit mirror lives in a separate Git repository from the primary repo. Two reasons:
 
 - **Compromise isolation.** A compromise of one repo's signing keys doesn't compromise both. An attacker would need to compromise both repos' keys to forge the chain across the boundary.
-- **Different lifecycle.** The primary repo evolves (history can occasionally rewrite for legitimate reasons — squash-merges, rebases). The audit mirror is append-only forever. Mixing them invites accidents.
+- **Different lifecycle.** The primary repo evolves (history can occasionally rewrite for legitimate reasons - squash-merges, rebases). The audit mirror is append-only forever. Mixing them invites accidents.
 
 ## Setup steps
 
 ### 1. Create the audit-mirror repository
 
-Typically private. Public mirrors are possible if the audit trail itself can be public — depends on whether bundle contents (workstream IDs, scope claims, verdict references) are sensitive. **Default to private** unless you've explicitly decided otherwise.
+Typically private. Public mirrors are possible if the audit trail itself can be public - depends on whether bundle contents (workstream IDs, scope claims, verdict references) are sensitive. **Default to private** unless you've explicitly decided otherwise.
 
 ```bash
 gh repo create org/csae-audit-mirror --private \
-  --description "Audit chain mirror — bundle entries linking commits to verdicts and scope claims. Append-only."
+  --description "Audit chain mirror - bundle entries linking commits to verdicts and scope claims. Append-only."
 ```
 
 ### 2. Configure branch protection on main
 
 Required protections:
 
-- **No force-push** — history rewriting forbidden
-- **No branch deletion** — main cannot be removed
-- **Require signed commits** — all bundle entries must be cryptographically signed
-- **Linear history** (optional but recommended) — keeps the chain trivially linearizable for audit walk-back
+- **No force-push** - history rewriting forbidden
+- **No branch deletion** - main cannot be removed
+- **Require signed commits** - all bundle entries must be cryptographically signed
+- **Linear history** (optional but recommended) - keeps the chain trivially linearizable for audit walk-back
 
 ```bash
 gh api -X PUT repos/org/csae-audit-mirror/branches/main/protection \
@@ -67,16 +67,16 @@ Set `CSAE_AUDIT_MIRROR` to the local clone path or remote URL the validator shou
 
 ## Publishing to the mirror: the detached mirror worktree
 
-The recommended way to *publish* bundles to the audit mirror is from a **dedicated mirror worktree** in a detached-HEAD state — not from whatever branch your working clone happens to have checked out. See [`PROTOCOL.md`](../PROTOCOL.md) §"Audit mirror" → "Detached-mirror publishing" for the formal rationale.
+The recommended way to *publish* bundles to the audit mirror is from a **dedicated mirror worktree** in a detached-HEAD state - not from whatever branch your working clone happens to have checked out. See [`PROTOCOL.md`](../PROTOCOL.md) §"Audit mirror" → "Detached-mirror publishing" for the formal rationale.
 
 ### Why publish from a detached worktree, not the working clone
 
-If the audit-mirror push runs from the working clone, it inherits that clone's state. A dirty working tree, a clone that's behind canonical, or a clone mid-ceremony on a feature branch all stall the publish — and the audit trail (which should be the most durable, least-coupled artifact you have) ends up gated on the most volatile one. Deferring the publish "until the working tree is clean" is exactly how audit-publish backlogs — and the coverage gaps they cause — accumulate.
+If the audit-mirror push runs from the working clone, it inherits that clone's state. A dirty working tree, a clone that's behind canonical, or a clone mid-ceremony on a feature branch all stall the publish - and the audit trail (which should be the most durable, least-coupled artifact you have) ends up gated on the most volatile one. Deferring the publish "until the working tree is clean" is exactly how audit-publish backlogs - and the coverage gaps they cause - accumulate.
 
 A detached mirror worktree decouples the publish from the working clone entirely:
 
-- **Ref isolation.** Worktrees of one repository share branch refs. A worktree checked out *on* the canonical branch that advanced it would move the canonical ref out from under the working clone that also has it checked out. A **detached HEAD** touches no branch ref — the working clone is untouched, and the publish can run at any time regardless of the working clone's state.
-- **No second clone.** The mirror worktree shares the primary repo's object store, so it costs no extra full clone (no multi-gigabyte duplicate) — just a worktree directory.
+- **Ref isolation.** Worktrees of one repository share branch refs. A worktree checked out *on* the canonical branch that advanced it would move the canonical ref out from under the working clone that also has it checked out. A **detached HEAD** touches no branch ref - the working clone is untouched, and the publish can run at any time regardless of the working clone's state.
+- **No second clone.** The mirror worktree shares the primary repo's object store, so it costs no extra full clone (no multi-gigabyte duplicate) - just a worktree directory.
 
 ### Provision the mirror worktree
 
@@ -98,7 +98,7 @@ git -C ../audit-mirror-host clean -fdq
 
 ### Publish from it
 
-The bundle commit lands on the *detached HEAD*, and the push targets the audit mirror's canonical branch explicitly — advancing the audit mirror, **never** the working clone's local branch ref:
+The bundle commit lands on the *detached HEAD*, and the push targets the audit mirror's canonical branch explicitly - advancing the audit mirror, **never** the working clone's local branch ref:
 
 ```bash
 # In the mirror worktree: stage the bundle, commit on the detached HEAD, then:
@@ -107,7 +107,7 @@ git -C ../audit-mirror-host push <audit-mirror-remote> HEAD:main
 
 Invariants (enforce these in your publishing tooling):
 
-- **Refuse to publish from an attached HEAD.** A publish issued from a worktree attached to the canonical branch would advance the shared ref — fail loud rather than corrupt the working clone's view.
+- **Refuse to publish from an attached HEAD.** A publish issued from a worktree attached to the canonical branch would advance the shared ref - fail loud rather than corrupt the working clone's view.
 - **Push `HEAD:main`, never advance the local branch ref.** The mirror push moves only the audit mirror's canonical branch.
 - **Reset-clean before each publish.** The mirror worktree carries no state between publishes.
 
@@ -148,15 +148,15 @@ Organize by month for filesystem performance at scale (some teams hit thousands 
 
 ## What gets written to the mirror
 
-- **Bundle files** — one per workstream
-- **Bypass-record commits** — when applicable; see [`PROTOCOL.md`](../PROTOCOL.md) §"Validator semantics" — bypass-record
-- **Chain-repair bundles** — when applicable; see [`PROTOCOL.md`](../PROTOCOL.md) §"Recovery"
+- **Bundle files** - one per workstream
+- **Bypass-record commits** - when applicable; see [`PROTOCOL.md`](../PROTOCOL.md) §"Validator semantics" - bypass-record
+- **Chain-repair bundles** - when applicable; see [`PROTOCOL.md`](../PROTOCOL.md) §"Recovery"
 
 ## What does NOT get written to the mirror
 
-- **Source code from the primary repo** — the bundle references commit ranges in the primary; it doesn't carry them
-- **Substantive work content** — bundle is metadata
-- **Operator or reviewer key material directly** — bundles are signed by keys, but key material itself stays in standard key-management infrastructure (PGP keyring, Sigstore, etc.)
+- **Source code from the primary repo** - the bundle references commit ranges in the primary; it doesn't carry them
+- **Substantive work content** - bundle is metadata
+- **Operator or reviewer key material directly** - bundles are signed by keys, but key material itself stays in standard key-management infrastructure (PGP keyring, Sigstore, etc.)
 
 ## Verification
 

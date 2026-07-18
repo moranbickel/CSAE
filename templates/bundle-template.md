@@ -22,7 +22,7 @@ timestamp: <ISO-8601 UTC>
 
 ## Description
 
-<one paragraph max — bundle is metadata, not narrative>
+<one paragraph max - bundle is metadata, not narrative>
 
 ## Annotations (optional)
 
@@ -47,9 +47,9 @@ timestamp: <ISO-8601 UTC>
 
 ## Optional fields (MAY)
 
-- **Description** — free-form, one paragraph max. The bundle is metadata; long narrative belongs in commit messages and PR descriptions, not in the bundle.
-- **Bypass acknowledgments** — when some commits in the range weren't reviewed at floor; each acknowledgment names the commit, the reason, and the operator's explicit authorization.
-- **Annotations** — exceptional-circumstance flags like *"retroactive attestation; chain-repair predecessor"* or *"first bundle after key rotation."*
+- **Description** - free-form, one paragraph max. The bundle is metadata; long narrative belongs in commit messages and PR descriptions, not in the bundle.
+- **Bypass acknowledgments** - when some commits in the range weren't reviewed at floor; each acknowledgment names the commit, the reason, and the operator's explicit authorization.
+- **Annotations** - exceptional-circumstance flags like *"retroactive attestation; chain-repair predecessor"* or *"first bundle after key rotation."*
 
 ## MUST NOT contain
 

@@ -22,7 +22,7 @@ Tool names in this walkthrough (`csae-register-intent`, `csae-author-bundle`, `c
 
 ---
 
-## Morning — intent registration
+## Morning - intent registration
 
 alice opens the worker tree and runs intent registration *before* any substantive work:
 
@@ -41,7 +41,7 @@ a1b2c3d [csae-reg] ws-auth-refactor: extract OAuth flow from monolithic auth
 
 ---
 
-## Work — six commits over the morning
+## Work - six commits over the morning
 
 alice and the AI assistant produce six work commits:
 
@@ -58,7 +58,7 @@ The work spans the auth-refactor scope. None of these commits are on canonical m
 
 ---
 
-## Afternoon — review
+## Afternoon - review
 
 alice dispatches a Russian-Judge review (Code RJ) on the commit range `a1b2c3d..y9z0a1b`. The reviewer returns a verdict file at `verdicts/oauth-refactor-2026-05-20T140000Z.md`:
 
@@ -106,7 +106,7 @@ The covered range is now `a1b2c3d..7e8f9a0`: registration + work + fix-up + self
 
 ---
 
-## Audit-mirror publish — before canonical push
+## Audit-mirror publish - before canonical push
 
 The sequence is non-negotiable. The validator on canonical main reads from the audit mirror, not from alice's worker tree. The bundle has to land in the mirror first.
 
@@ -144,7 +144,7 @@ The canonical push lands. Audit chain extended by one bundle.
 
 ---
 
-## Recording the closure — after the merge, citing the canonical SHA
+## Recording the closure - after the merge, citing the canonical SHA
 
 The `ws-auth-refactor` work was tracking a backlog item: *"extract OAuth flow to service-boundary."* alice now marks it closed. The discipline: she records the closure **after** the canonical push, and cites the **canonical** commit, not the working-branch commit she made earlier.
 
@@ -164,7 +164,7 @@ ancestor ✓
 She records the closure note citing `9f0a1b2`, the canonical commit, bound to the verdict the bundle already references:
 
 ```
-ws-auth-refactor: CLOSED — extract OAuth flow to service-boundary.
+ws-auth-refactor: CLOSED - extract OAuth flow to service-boundary.
 verified by canonical commit 9f0a1b2 (ancestor of canonical main),
 under verdict c3d4e5f (score 9.4, pass at floor), bundle bundle_X10.
 ```
@@ -173,7 +173,7 @@ Had alice authored this note *before* the merge (citing `7e8f9a0`), the citation
 
 ---
 
-## Three days later — coverage gap surfaces
+## Three days later - coverage gap surfaces
 
 alice is reviewing a different workstream and walks the chain backward to verify a recent bundle's predecessor. The walk hits a coverage gap at commit `4f5e6d7` (from 2026-05-12, a prior session).
 
@@ -239,7 +239,7 @@ Audit confidence at this section: lower than eager-attestation sections, honestl
 
 ---
 
-## Final state — audit chain
+## Final state - audit chain
 
 ```
 bundle_X9  (prior workstream, eager attestation)
@@ -248,7 +248,7 @@ bundle_X10 (ws-auth-refactor, eager, verdict 9.4)
   ↓
 bundle_X11 (next workstream, eager attestation)
   ↓
-bundle_X12 (RETROACTIVE — coverage gap repair, verdict 8.7 below floor, annotation declares post-hoc status)
+bundle_X12 (RETROACTIVE - coverage gap repair, verdict 8.7 below floor, annotation declares post-hoc status)
 ```
 
 A future audit walking the chain sees the gap was filled with explicit honesty about lower-confidence status. The chain stays intact; the honesty preserves trust.
@@ -273,4 +273,4 @@ The whole eager-attestation cycle (intent → work → review → bundle → mir
 
 ← Back to [`README.md`](../README.md) · [`PROTOCOL.md`](../PROTOCOL.md)
 
-— Moran Bickel
+- Moran Bickel
