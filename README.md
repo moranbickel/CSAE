@@ -1,12 +1,15 @@
-# CSAE — Continuous Session-Attested Evidence
+# CSAE - Continuous Session-Attested Evidence
 
-**A protocol for attaching a durable audit trail to AI-generated commits, so the record is still there when someone asks about it later.** When AI-assisted commits land on `main` without verifiable provenance, a trust gap opens. CSAE closes it with a chain: intent registration, bundle authoring, and an audit mirror.
+A protocol for attaching a durable audit trail to AI-generated commits, so the
+record is still there when someone asks about it months later. When AI-assisted
+commits land on main without verifiable provenance, a gap opens: who approved
+this, against what scope, under which reviewer's verdict? git log does not
+capture that. CSAE does, with a chain - intent registration before the work, a
+bundle at the end, and a separate audit mirror.
 
-If you've ever looked at a months-old commit, seen "AI assistant" in the author field, and realized you couldn't reconstruct *who approved it, against what scope, under which reviewer's verdict*, this is for you.
-
-I built it while developing [ORCA](#about-orca), an AI legal reasoning system for Israeli civil litigation. It's one of a series of methodology pieces I'm publishing from that work, alongside [Russian Judge](https://github.com/moranbickel/russian-judge), [Three-Body Protocol](https://github.com/moranbickel/three-body-protocol), and [Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence).
-
----
+I built it developing ORCA, a closed-source legal-AI system. It is one of a
+series; it composes with Russian Judge (the review it points at) and
+Peer-Worker-Convergence (the merge it rides on), but it stands alone.
 
 ## The failure it solves
 
@@ -24,19 +27,21 @@ The gap isn't about *whether* the work was good. It's about whether a record exi
 
 ---
 
+
 ## What CSAE is not
 
 CSAE is **not** full supply-chain attestation. [SLSA](https://slsa.dev) covers build systems, dependency chains, and artifact provenance from source to deployment. CSAE is narrower. It covers the moment a commit lands on `main`, not the whole build-and-distribute chain. If you need both, run both.
 
-It's **not** a substitute for code review. A signed bundle that points at a reviewer's verdict doesn't replace the verdict; it carries the verdict into a durable chain. The review still has to happen. [Russian Judge](https://github.com/moranbickel/russian-judge) is one structured review that composes cleanly with CSAE; informal PR comments are another. The bundle attests *that* review happened and *what it concluded*. It does not attest *that the review was good*.
+It's **not** a substitute for code review. A signed bundle that points at a reviewer's verdict doesn't replace the verdict; it carries the verdict into a durable chain. The review still has to happen. [Russian Judge](https://github.com/moranbickel/Russian-Judge) is one structured review that composes cleanly with CSAE; informal PR comments are another. The bundle attests *that* review happened and *what it concluded*. It does not attest *that the review was good*.
 
 It's **not** commit-signing on its own. `git commit -S` verifies that the commit's claimed author held the signing key at the time. That's a primitive. CSAE chains primitives like that into a larger structure: scope claim, commit range, verdict reference, self-attestation, all linked to predecessors and successors. The chain is the contribution; the primitives are inputs.
 
 It's **not** cryptographic anti-fraud. A determined adversary with key access can forge a bundle. CSAE's threat model is honest teams operating in good faith who need verifiable records for later questions: audit, attribution disputes, compliance review, due diligence. If your threat model includes adversarial signing, CSAE adds defense in depth but isn't the last line.
 
-And it's **not** a complete attestation solution by itself. It's one layer in a stack that, in my own practice, also includes adversarial review ([Russian Judge](https://github.com/moranbickel/russian-judge)) and topology convergence ([Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence)). Each layer answers a different question, and the stack answers more than any layer does alone.
+And it's **not** a complete attestation solution by itself. It's one layer in a stack that, in my own practice, also includes adversarial review ([Russian Judge](https://github.com/moranbickel/Russian-Judge)) and topology convergence ([Peer-Worker Convergence](https://github.com/moranbickel/Peer-Worker-Convergence)). Each layer answers a different question, and the stack answers more than any layer does alone.
 
 ---
+
 
 ## CSAE vs. alternatives
 
@@ -45,7 +50,7 @@ And it's **not** a complete attestation solution by itself. It's one layer in a 
 | Scope | Per-commit, informal | Per-commit, cryptographic | Build pipeline → artifact | Build artifact → consumer | Source → merge gate → artifact | Commit-range → canonical main |
 | What's attested | Whatever `git log` recorded | Authorship (key held the commit) | Build provenance | Artifact provenance + transparency log | Workflow identity + artifact signature + "checks passed" | Scope claim + review verdict + self-attestation |
 | Trust root | Memory, Slack search, PRs | The key trust hierarchy | Build platform attestation | Sigstore transparency log + Fulcio | GitHub OIDC issuer + Fulcio/Rekor + branch-protection config | Predecessor bundle + reviewer verdict + operator scope claim |
-| Recovery from "who approved this?" | Often impossible | Author yes; reviewer no | N/A — different question | Artifact-level; commit-level limited | Review occurred (branch protection); scope/authorization not recorded | The bundle carries the answer |
+| Recovery from "who approved this?" | Often impossible | Author yes; reviewer no | N/A - different question | Artifact-level; commit-level limited | Review occurred (branch protection); scope/authorization not recorded | The bundle carries the answer |
 | Operational burden | Zero (until you need it) | Low (one config flag) | Medium-high (build infra changes) | Medium (signing + verification) | Low-medium (platform-provided) | Medium-high (eager intent registration + bundle authoring + separate audit mirror + pre-push hook) |
 | Best for | Solo dev, low-stakes work | Teams that just want authorship | Regulated build pipelines | Open-source artifact distribution | Teams already all-in on GitHub Actions | AI-assisted teams needing commit-level provenance |
 
@@ -55,7 +60,8 @@ CSAE doesn't replace the others. It fills the gap at the commit-landing layer th
 
 ---
 
-## Composition with [Russian Judge](https://github.com/moranbickel/russian-judge) and [Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence)
+
+## Composition with [Russian Judge](https://github.com/moranbickel/Russian-Judge) and [Peer-Worker Convergence](https://github.com/moranbickel/Peer-Worker-Convergence)
 
 The three pieces form an attestation triangle. Each answers a different question; together they make AI-assisted work auditable end to end.
 
@@ -68,6 +74,7 @@ In practice it goes like this: a peer-worker session ends, the side-branch β ru
 You can run CSAE on its own. Informal review feeds the bundle, single-worker setups skip the convergence layer, and you still get most of the audit-trail benefit. But the trio compounds. With all three running, *"who approved this, against what, under whose authorization?"* is answerable in seconds instead of an afternoon of digging.
 
 ---
+
 
 ## The protocol, at a glance
 
@@ -104,66 +111,27 @@ Be precise about what that buys you. "Non-circular" means no link needs itself o
 
 ---
 
+
 ## A worked example
 
-Imagine a session refactoring a database schema. The operator wants the work auditable.
-
-**Session start, intent registration:**
-
-The operator runs an intent-registration command that takes a workstream ID and a one-sentence intent. The command produces a small registration commit on the worker branch, call it `commit_A0`, whose message embeds the workstream metadata. This commit precedes any substantive work and forms the "before" boundary of the audit chain.
-
-**Work happens.** The operator and an AI assistant produce commits `commit_A1` through `commit_A5`. These touch the schema, the consuming code, and the tests.
-
-**Session end, review.** The operator dispatches a Russian Judge review (or an equivalent structured review) on the commit range. The reviewer returns a verdict file, call it `verdict_v0`, with score, defect classification, and pass/fail status. The verdict lives in a verdicts directory and is signed by the reviewer.
-
-**Bundle authoring.** The operator runs a bundle-authoring step that reads:
-- The intent registration from `commit_A0` (the scope claim)
-- The commit range `commit_A0..commit_A5` (the work shipped)
-- The verdict reference `verdict_v0` (the work passed review)
-
-The step produces a bundle markdown file and a self-attestation commit, `commit_A6`, on the worker branch. The bundle file lives in the audit-mirror tree; the self-attestation commit's message references the bundle file's content hash, the verdict reference, and the scope claim from `commit_A0`.
-
-The bundle now covers `commit_A0..commit_A6`: the registration commit, the work commits, and the self-attestation commit itself. That last inclusion is what makes the attestation self-referential and tamper-evident in the small.
-
-**Audit-mirror publish.** The operator pushes the bundle file to the audit-mirror repository. The mirror's history grows by one bundle entry, and each new bundle's metadata references the previous bundle in the chain.
-
-**Canonical push.** The operator pushes `commit_A0..commit_A6` to canonical `main`, typically via [PWC](https://github.com/moranbickel/peer-worker-convergence)'s side-branch β. The pre-push validator checks that every commit being pushed is covered by an attested bundle in the audit mirror. The push lands.
-
-**Three months later.** Someone asks who approved the schema change. The audit chain walks:
-- `commit_A3` (the actual schema change) → covered by bundle `B_A`
-- Bundle `B_A` → references verdict `verdict_v0` and scope claim `ws-schema-cleanup`
-- `verdict_v0` → signed by the reviewer, with score, defect list, pass status
-- Scope claim → operator-authored registration in `commit_A0`
-
-The answer comes back in seconds.
-
----
+A complete narrative walkthrough - a schema-refactor session from intent
+registration through canonical push and a three-months-later chain walk - is in
+[`PROTOCOL.md`](./PROTOCOL.md) (Worked example), and a fuller example including a
+coverage-gap recovery is in [`examples/attestation-walkthrough.md`](./examples/attestation-walkthrough.md).
 
 ## Where teams actually break the chain
 
-Three failure modes show up often enough in practice to deserve field-manual entries. The abstract anti-patterns live in [`PROTOCOL.md`](./PROTOCOL.md); these are the operational signals.
-
-**Forgot intent registration.** *Signal:* work commits on canonical `main` with no preceding registration commit; `git log --grep="<workstream-id>"` returns work but no scope claim. *Why it broke:* eager registration was skipped, so no scope claim exists for any bundle to reference. *Recover:* [Stranded intent](./PROTOCOL.md#recovery-from-stranded-intent), a retroactive bundle, honest about the gap.
-
-**Landed uncovered commits on main.** *Signal:* commits on `origin/main` whose hashes don't match any bundle in the audit mirror, usually found when a future chain-walk hits an unattested predecessor. *Why it broke:* the validator was bypassed (logged or not) or a force-push routed around coverage. *Recover:* [Coverage gap](./PROTOCOL.md#recovery-from-a-coverage-gap), a retroactive bundle annotated as post-hoc.
-
-**Bundle published after the canonical push, not before.** *Signal:* the canonical push fails with the validator's "not covered" message; the bundle file exists in the worker tree but isn't in the audit mirror yet. *Why it broke:* a sequence violation, because the validator reads from the audit mirror, not the local worker tree. *Recover:* push the bundle to the audit mirror first, confirm it landed, then re-attempt the canonical push. No data loss, just a sequence to fix.
-
----
+The operational failure signals - forgotten intent registration, uncovered
+commits landing on main, and a bundle published after the canonical push instead
+of before - and their recovery are specified in [`PROTOCOL.md`](./PROTOCOL.md)
+(Anti-patterns and Recovery).
 
 ## Recovery
 
-CSAE has four failure modes worth naming as classes. The discipline across all of them is the same as in [PWC](https://github.com/moranbickel/peer-worker-convergence): **don't compound the failure.** A break in the chain creates a divergent state; the fix is to converge back through the protocol, not to route around it.
-
-**Stranded intent.** The operator registered a scope claim, but the session ended without a bundle (work abandoned, machine crashed, scope changed mid-flight). The registration commit exists on the worker branch, but no bundle ever covered it. **Recovery:** either author a "no-op bundle" closing the workstream as abandoned (auditable abandonment is fine), or include the registration commit in the next bundle whose scope honestly covers it. The thing to avoid is leaving stranded intent *silently*, because that looks like unfinished authorized work.
-
-**Coverage gap.** Commits exist on canonical `main` without matching bundle attestation. Either someone bypassed the validator (logged, you hope) or the validator was misconfigured. **Recovery:** retroactive attestation. Author a bundle that covers the gap commits and reference the post-hoc review if one exists, or note plainly that no review preceded the commits. Retroactive attestation is honest about being retroactive; it doesn't pretend the chain was never broken. The audit value is preserved at a lower confidence level.
-
-**Compromised key or audit-mirror tampering.** Outside CSAE's scope, per the threat-model note above. Standard key-rotation discipline (see Sigstore, in-toto) and standard tamper-evident-log discipline apply. CSAE depends on the underlying primitives being sound; if they're compromised, the chain is compromised at the same point.
-
-**Cascading break.** A break early in the chain that everything after it references. This is the most expensive recovery. **Procedure:** mark the break explicitly with a "chain repair" bundle that names it, declares what's recoverable downstream, and starts a new sub-chain from the repair bundle forward. Downstream bundles reference the repair bundle as their predecessor. The break stays visible in history, and the chain continues with the break acknowledged rather than papered over.
-
----
+The four recovery classes - stranded intent, coverage gap, compromised key or
+tampered mirror, and cascading break - are specified in
+[`PROTOCOL.md`](./PROTOCOL.md) (Recovery). The discipline across all of them is the
+same: a break in the chain is converged back through the protocol, not routed around.
 
 ## When to use it, and when not to
 
@@ -183,6 +151,7 @@ The real question isn't "do you use AI?" It's "will someone need to reconstruct,
 
 ---
 
+
 ## Adopt the mechanics in 30 minutes; internalize the discipline over a week
 
 1. **Decide the scope.** Which commits need attestation? Usually all AI-assisted commits, plus anything landing on canonical `main`. If you're starting on an existing project, declare a cutover date and accept that pre-cutover commits don't have CSAE attestation. That's the honest starting state.
@@ -196,6 +165,7 @@ Setup takes about 30 minutes. The discipline takes a week to settle. The first t
 For the formal protocol (invariants, bundle field requirements, validator semantics, audit-mirror discipline, recovery procedures), see [`PROTOCOL.md`](./PROTOCOL.md). For a complete walkthrough including a coverage-gap recovery, see [`examples/attestation-walkthrough.md`](./examples/attestation-walkthrough.md).
 
 ---
+
 
 ## Related work
 
@@ -219,17 +189,19 @@ If you know of closer prior art, please open an issue. I'd genuinely like to pos
 
 ---
 
+
 ## Related
 
 This is one of a series of methodology pieces from building [ORCA](#about-orca):
 
-- **[Russian Judge](https://github.com/moranbickel/russian-judge)** — adversarial AI review with structured verdicts.
-- **[Three-Body Protocol](https://github.com/moranbickel/three-body-protocol)** — coordination across sessions in time.
-- **[Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence)** — coordination across sessions in parallel.
-- **CSAE** — *this repo.* Continuous Session-Attested Evidence: attestation chains for AI-generated commits.
-- **[Pre-IMPL Forensic Discipline](https://github.com/moranbickel/Pre-IMPL-Forensic-Discipline)** — catching wrong premises before they become wrong commits (v0.1 draft).
+- **[Russian Judge](https://github.com/moranbickel/Russian-Judge)** - adversarial AI review with structured verdicts.
+- **[Three-Body Protocol](https://github.com/moranbickel/Three-Body-Protocol)** - coordination across sessions in time.
+- **[Peer-Worker Convergence](https://github.com/moranbickel/Peer-Worker-Convergence)** - coordination across sessions in parallel.
+- **CSAE** - *this repo.* Continuous Session-Attested Evidence: attestation chains for AI-generated commits.
+- **[Pre-IMPL Forensic Discipline](https://github.com/moranbickel/Pre-IMPL-Forensic-Discipline)** - catching wrong premises before they become wrong commits (v0.1 draft).
 
 More pieces as they're written.
+
 
 ## About ORCA
 
@@ -239,9 +211,10 @@ See my [GitHub profile](https://github.com/moranbickel) for the full body of wor
 
 ---
 
+
 ## License
 
 - Prose: [CC BY 4.0](./LICENSE-CC-BY-4.0)
 - Templates and code: [MIT](./LICENSE-MIT)
 
-— Moran Bickel
+- Moran Bickel

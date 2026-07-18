@@ -1,4 +1,4 @@
-# CSAE Protocol — Continuous Session-Attested Evidence
+# CSAE Protocol - Continuous Session-Attested Evidence
 
 This is the formal specification of the protocol described informally in [`README.md`](./README.md). The README is the *why*; this is the *how*, with enough specificity that a reader can implement it without ambiguity.
 
@@ -30,7 +30,7 @@ This document specifies invariants and workflow shape. It does not specify crypt
 
 ---
 
-## The three concepts — formal definitions
+## The three concepts - formal definitions
 
 ### Intent registration
 
@@ -76,7 +76,7 @@ This document specifies invariants and workflow shape. It does not specify crypt
 5. Produce a self-attestation commit `C_attest` on the worker branch. `C_attest`'s message embeds: the bundle file's content hash, the predecessor bundle reference, the verdict reference(s), and the scope-claim hash from `C_scope`.
 6. The bundle's covered range becomes `[C_scope..C_attest]`, inclusive of registration, work, and self-attestation.
 7. Push the bundle file to the audit mirror as a new commit there.
-8. Push `[C_scope..C_attest]` to canonical main (typically via a convergence ceremony like [PWC](https://github.com/moranbickel/peer-worker-convergence) β.2).
+8. Push `[C_scope..C_attest]` to canonical main (typically via a convergence ceremony like [PWC](https://github.com/moranbickel/Peer-Worker-Convergence) β.2).
 
 **Postconditions:**
 - A bundle exists in the audit mirror with predecessor → this → (future-successor) chain integrity
@@ -246,7 +246,7 @@ A bundle attests *that a commit range was reviewed under a verdict*. A **closure
 
 **The integrity property.** When a closure note cites a commit as the verification for a closed work-item, the cited commit MUST be an ancestor of the canonical branch, and the closure note MUST be authored *after* the work has landed on canonical main. The note cites the **canonical** commit, never a pre-merge working-branch SHA.
 
-**Why this matters — the SHA-evaporation failure.** Convergence ceremonies that reach canonical main via cherry-pick or rebase (rather than a fast-forward of the exact working-branch commits) produce *content-identical-but-different* SHAs on the canonical branch. The working-branch commit `W` and its canonical twin `C` have the same diff, author, and message, but different hashes. If a closure note is authored *before* the merge and cites `W`, that SHA evaporates the moment the working branch is cleaned up: `W` is no longer an ancestor of anything, and a future audit asking "is the commit that closed this work-item real and on canonical main?" finds a SHA that exists nowhere. The work was real; the citation is dead.
+**Why this matters - the SHA-evaporation failure.** Convergence ceremonies that reach canonical main via cherry-pick or rebase (rather than a fast-forward of the exact working-branch commits) produce *content-identical-but-different* SHAs on the canonical branch. The working-branch commit `W` and its canonical twin `C` have the same diff, author, and message, but different hashes. If a closure note is authored *before* the merge and cites `W`, that SHA evaporates the moment the working branch is cleaned up: `W` is no longer an ancestor of anything, and a future audit asking "is the commit that closed this work-item real and on canonical main?" finds a SHA that exists nowhere. The work was real; the citation is dead.
 
 The fix is sequencing, not new machinery:
 
@@ -321,7 +321,7 @@ The orchestrator automates the deterministic tail and **stops** at the steps tha
 
 ### Verdict references
 
-The verdict reference field in a CSAE bundle is the artifact identifier of one or more reviewer verdicts. The reviewer (human or [Russian Judge](https://github.com/moranbickel/russian-judge)) produces a verdict artifact, typically a markdown file with structured fields (score, defect classification, pass status), signed by the reviewer's key and stored in a verdicts directory in the primary repo (or in the audit mirror, depending on the project's choice).
+The verdict reference field in a CSAE bundle is the artifact identifier of one or more reviewer verdicts. The reviewer (human or [Russian Judge](https://github.com/moranbickel/Russian-Judge)) produces a verdict artifact, typically a markdown file with structured fields (score, defect classification, pass status), signed by the reviewer's key and stored in a verdicts directory in the primary repo (or in the audit mirror, depending on the project's choice).
 
 The bundle references the verdict by content hash + path. The bundle does not embed the verdict's content (per Bundle Field Requirements: MUST NOT contain reviewer credentials or substantive content).
 
@@ -329,7 +329,7 @@ Verification at the validator: the validator follows the verdict reference, open
 
 ### β.2 ceremony integration
 
-In a peer-worker setup where canonical main is reached via [PWC](https://github.com/moranbickel/peer-worker-convergence)'s β.2 ceremony (precision-target side-branch), CSAE bundle authoring runs as a step within the ceremony:
+In a peer-worker setup where canonical main is reached via [PWC](https://github.com/moranbickel/Peer-Worker-Convergence)'s β.2 ceremony (precision-target side-branch), CSAE bundle authoring runs as a step within the ceremony:
 
 1. **PWC steps 1-3** identify the commit range and create the side-branch from `origin/main`.
 2. **CSAE step**: author the bundle for the side-branch's commit range. The bundle's commit range is `[C_scope..C_attest]` where `C_scope` is the worker's intent-registration commit, `C_attest` is the self-attestation commit appended to the side-branch.
@@ -501,21 +501,58 @@ Run a full chain verification at least monthly, and immediately after any suspec
 
 ## Glossary
 
-- **Audit mirror** — separate repository holding the append-only attestation chain
-- **Bundle** — the markdown/manifest artifact linking a commit range to its scope and review
-- **Chain** — linked sequence of bundles, predecessor-referenced
-- **Coverage** — property of a commit being within a well-formed bundle's claimed range
-- **Floor** — minimum acceptable verdict standard (project-defined)
-- **Intent registration** — pre-work scope-claim authoring (eager-registration discipline)
-- **Predecessor bundle** — the previous bundle in the chain; provides the recursive integrity property
-- **Scope claim** — operator-authored declaration of what work was authorized
-- **Self-attestation commit** — the commit within a bundle's range whose message embeds the bundle's integrity references
-- **Validator** — pre-push hook or CI check rejecting pushes without coverage
-- **Verdict** — reviewer artifact recording that work passed review at floor
-- **Verdict reference** — content-hash + path identifier of a verdict; bundle field
+- **Audit mirror** - separate repository holding the append-only attestation chain
+- **Bundle** - the markdown/manifest artifact linking a commit range to its scope and review
+- **Chain** - linked sequence of bundles, predecessor-referenced
+- **Coverage** - property of a commit being within a well-formed bundle's claimed range
+- **Floor** - minimum acceptable verdict standard (project-defined)
+- **Intent registration** - pre-work scope-claim authoring (eager-registration discipline)
+- **Predecessor bundle** - the previous bundle in the chain; provides the recursive integrity property
+- **Scope claim** - operator-authored declaration of what work was authorized
+- **Self-attestation commit** - the commit within a bundle's range whose message embeds the bundle's integrity references
+- **Validator** - pre-push hook or CI check rejecting pushes without coverage
+- **Verdict** - reviewer artifact recording that work passed review at floor
+- **Verdict reference** - content-hash + path identifier of a verdict; bundle field
+
+---
+
+## Worked example
+
+Imagine a session refactoring a database schema. The operator wants the work auditable.
+
+**Session start, intent registration:**
+
+The operator runs an intent-registration command that takes a workstream ID and a one-sentence intent. The command produces a small registration commit on the worker branch, call it `commit_A0`, whose message embeds the workstream metadata. This commit precedes any substantive work and forms the "before" boundary of the audit chain.
+
+**Work happens.** The operator and an AI assistant produce commits `commit_A1` through `commit_A5`. These touch the schema, the consuming code, and the tests.
+
+**Session end, review.** The operator dispatches a Russian Judge review (or an equivalent structured review) on the commit range. The reviewer returns a verdict file, call it `verdict_v0`, with score, defect classification, and pass/fail status. The verdict lives in a verdicts directory and is signed by the reviewer.
+
+**Bundle authoring.** The operator runs a bundle-authoring step that reads:
+- The intent registration from `commit_A0` (the scope claim)
+- The commit range `commit_A0..commit_A5` (the work shipped)
+- The verdict reference `verdict_v0` (the work passed review)
+
+The step produces a bundle markdown file and a self-attestation commit, `commit_A6`, on the worker branch. The bundle file lives in the audit-mirror tree; the self-attestation commit's message references the bundle file's content hash, the verdict reference, and the scope claim from `commit_A0`.
+
+The bundle now covers `commit_A0..commit_A6`: the registration commit, the work commits, and the self-attestation commit itself. That last inclusion is what makes the attestation self-referential and tamper-evident in the small.
+
+**Audit-mirror publish.** The operator pushes the bundle file to the audit-mirror repository. The mirror's history grows by one bundle entry, and each new bundle's metadata references the previous bundle in the chain.
+
+**Canonical push.** The operator pushes `commit_A0..commit_A6` to canonical `main`, typically via [PWC](https://github.com/moranbickel/Peer-Worker-Convergence)'s side-branch β. The pre-push validator checks that every commit being pushed is covered by an attested bundle in the audit mirror. The push lands.
+
+**Three months later.** Someone asks who approved the schema change. The audit chain walks:
+- `commit_A3` (the actual schema change) → covered by bundle `B_A`
+- Bundle `B_A` → references verdict `verdict_v0` and scope claim `ws-schema-cleanup`
+- `verdict_v0` → signed by the reviewer, with score, defect list, pass status
+- Scope claim → operator-authored registration in `commit_A0`
+
+The answer comes back in seconds.
+
+---
 
 ---
 
 For the informal motivation and the failure-it-solves story, see [`README.md`](./README.md). For a complete walkthrough including a coverage-gap recovery, see [`examples/attestation-walkthrough.md`](./examples/attestation-walkthrough.md).
 
-— Moran Bickel
+- Moran Bickel
