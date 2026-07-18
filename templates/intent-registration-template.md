@@ -1,6 +1,6 @@
 # Intent Registration Template
 
-A registration commit's message embeds the scope claim — what work was authorized, by whom, when, against which workstream. The registration must precede substantive work (eager-registration discipline; see [`PROTOCOL.md`](../PROTOCOL.md) §"Intent registration").
+A registration commit's message embeds the scope claim - what work was authorized, by whom, when, against which workstream. The registration must precede substantive work (eager-registration discipline; see [`PROTOCOL.md`](../PROTOCOL.md) §"Intent registration").
 
 The exact tooling format depends on your project. The minimum-viable commit message:
 
@@ -24,9 +24,9 @@ timestamp: <ISO-8601 UTC>
 
 ## Optional fields
 
-- `predecessor-workstream` — if this work follows a prior workstream and the chain reference matters
-- `estimated-scope` — rough commit count or files touched (advisory, not binding)
-- `cluster-or-domain` — project-level taxonomy tag for cross-workstream search
+- `predecessor-workstream` - if this work follows a prior workstream and the chain reference matters
+- `estimated-scope` - rough commit count or files touched (advisory, not binding)
+- `cluster-or-domain` - project-level taxonomy tag for cross-workstream search
 
 ## What the registration commit should NOT contain
 
