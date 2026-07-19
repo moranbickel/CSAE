@@ -1,5 +1,7 @@
 # CSAE - Continuous Session-Attested Evidence
 
+[![smoke](https://github.com/moranbickel/CSAE/actions/workflows/smoke.yml/badge.svg)](https://github.com/moranbickel/CSAE/actions/workflows/smoke.yml)
+
 A protocol for attaching a durable audit trail to AI-generated commits, so the
 record is still there when someone asks about it months later. When AI-assisted
 commits land on main without verifiable provenance, a gap opens: who approved
