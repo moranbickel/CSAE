@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+- `templates/validator-hook.sh` read only the first line of the pre-push input, so `git push origin feature main` (feature line first) skipped the main-branch coverage check and accepted an uncovered main update. The hook now reads every line, checks every update to the protected ref (configurable via `CSAE_PROTECTED_REF`, default `refs/heads/main`), pools uncovered commits and decides once. Deletion of the protected ref is rejected; creation checks only commits not already reachable from the remote's tracking refs; the commit-count message no longer reports 1 for an empty range.
+
+### Added
+- `tests/test-validator-hook.sh`, wired into the `smoke` workflow: multi-ref, deletion, creation, bypass and custom-protected-ref cases.
+
+### Documentation
+- README and PROTOCOL state that the coverage tool (`csae-verify`) is an external dependency the adopter must supply, and describe the multi-ref semantics.
+
 ## [0.2.0] - 2026-06-19
 
 Three protocol-level integrity properties added on top of the core loop - detached-mirror publishing, closure-SHA canonical binding, and the no-vacuous-attestation floor - plus the previously-unreleased vs-alternatives column. Additive throughout (no breaking changes to the bundle schema, validator semantics, or recovery procedures); minor version bump per SemVer.

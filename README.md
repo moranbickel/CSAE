@@ -18,6 +18,21 @@ Read the [worked example](examples/attestation-walkthrough.md), then inspect:
 - [Validator hook](templates/validator-hook.sh): the checks and configuration
   needed before adopting it.
 
+The hook does not decide coverage itself. It calls an external coverage tool
+(`csae-verify` by default, or whatever `CSAE_COVERAGE_TOOL` names) once per
+commit, as `<tool> --commit <sha> --audit-mirror <dir>`, and treats exit 0 as
+covered. **That tool is not part of this repository; you must supply it.**
+Without one the hook exits 2 (configuration error).
+
+On a push that updates several refs, Git sends the hook one line per ref. The
+hook reads every line and checks every update to the protected ref
+(`refs/heads/main`, or `CSAE_PROTECTED_REF`), wherever it appears in the list.
+Uncovered commits from all of those updates are pooled and the push is
+accepted or rejected once. Updates to other refs are not checked. Deleting the
+protected ref is always rejected, and creating it checks only commits not
+already reachable from the remote's tracking refs. Tests:
+`bash tests/test-validator-hook.sh`.
+
 Synthetic example of the problem:
 
 ```text
