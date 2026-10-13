@@ -195,7 +195,7 @@ The validator runs on push to canonical main (as a pre-push hook, a CI required 
 
 **Performance:** chain-integrity verification is O(N) in the number of bundles in the chain. For projects with long chains, cache verified-chain state at the audit-mirror level (the verifier doesn't need to re-walk the full chain on every push; it walks back to the last verified state).
 
-**Bypass:** an environment-variable-mediated bypass (intentionally awkward; not a CLI flag) allows pushes without bundle coverage. The reference hook prints a warning and allows the push; it writes nothing. The operator records the bypass (the bypassed commits, the operator, the rationale, the timestamp) as a bypass-record commit on the audit mirror, which is itself an audit-chain entry. The bypass covers every push that updates the protected ref, including deleting it.
+**Bypass:** an environment-variable-mediated bypass (intentionally awkward; not a CLI flag) allows pushes without bundle coverage. The reference hook prints a warning and allows the push; it writes nothing. The operator records the bypass (the bypassed commits, the operator, the rationale, the timestamp) as a bypass-record commit on the audit mirror, which is itself an audit-chain entry. The bypass skips the coverage check, the deletion rejection and the audit-mirror and verifier availability checks for every push that updates the protected ref; it does not override a configuration error or malformed hook input, which still fail with exit 2.
 
 ---
 

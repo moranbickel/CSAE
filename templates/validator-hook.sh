@@ -43,8 +43,11 @@
 #   CSAE_AUDIT_MIRROR    path of the audit-mirror repo (default ../audit-mirror)
 #   CSAE_COVERAGE_TOOL   coverage tool to run (default csae-verify)
 #   CSAE_PROTECTED_REF   protected branch: a full ref (refs/heads/main) or a
-#                        short branch name (main, taken as refs/heads/main).
-#                        Anything that is not a branch ref is exit 2.
+#                        short name without a slash (main, taken as
+#                        refs/heads/main). A branch whose name contains a
+#                        slash must be given as a full refs/heads/ ref.
+#                        Anything else (origin/main, heads/main, a tag ref)
+#                        is exit 2.
 
 set -euo pipefail
 
@@ -56,11 +59,14 @@ PROTECTED_REF="${CSAE_PROTECTED_REF:-refs/heads/main}"
 # Git sends full refs, so a short branch name must be expanded or it would
 # match nothing and silently disable the hook. A value that is still not a
 # branch ref (a tag, an empty name) is a configuration error, never an allow.
-if [[ "$PROTECTED_REF" != refs/* ]]; then
+# A short name is accepted only when it has no slash: origin/main or heads/main
+# would expand to a ref (refs/heads/origin/main) that git never sends, which is
+# the same silent allow-all. Slashed branch names must be spelled in full.
+if [[ "$PROTECTED_REF" != refs/* && "$PROTECTED_REF" != */* ]]; then
   PROTECTED_REF="refs/heads/$PROTECTED_REF"
 fi
 if [[ "$PROTECTED_REF" != refs/heads/?* ]]; then
-  echo "csae-validator: ERROR - CSAE_PROTECTED_REF must name a branch (main or refs/heads/main); got '${CSAE_PROTECTED_REF:-}'." >&2
+  echo "csae-validator: ERROR - CSAE_PROTECTED_REF must be a branch name without a slash (main) or a full ref (refs/heads/main, refs/heads/release/1.0); got '${CSAE_PROTECTED_REF:-}'." >&2
   exit 2
 fi
 

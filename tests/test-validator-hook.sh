@@ -221,6 +221,22 @@ run_hook reject "$MAIN$NL" CSAE_PROTECTED_REF=refs/heads/
 expect_rc 2 "(n5) CSAE_PROTECTED_REF=refs/heads/ (empty branch) -> configuration error"
 run_hook reject "" CSAE_PROTECTED_REF=refs/tags/main
 expect_rc 2 "(n6) bad CSAE_PROTECTED_REF is an error even with empty stdin"
+# Remote-qualified or ref-prefix spellings are rejected, not silently turned
+# into a ref that can never match (origin/main -> refs/heads/origin/main would
+# disable the hook). Protects: fail-closed configuration for the spellings an
+# adopter is most likely to try. A branch name containing a slash must be given
+# as a full refs/heads/ ref, which (n9) pins as working.
+run_hook reject "$MAIN$NL" CSAE_PROTECTED_REF=origin/main
+expect_rc 2 "(n7) CSAE_PROTECTED_REF=origin/main -> configuration error"
+run_hook reject "$MAIN$NL" CSAE_PROTECTED_REF=heads/main
+expect_rc 2 "(n8) CSAE_PROTECTED_REF=heads/main -> configuration error"
+case "$LAST_ERR" in
+  *refs/heads/*) pass "(n8) error explains how to spell the branch" ;;
+  *) fail "(n8) error does not explain the accepted spellings; stderr: $LAST_ERR" ;;
+esac
+SLASH="refs/heads/release/1.0 $head refs/heads/release/1.0 $base"
+run_hook reject "$SLASH$NL" CSAE_PROTECTED_REF=refs/heads/release/1.0
+expect_rc 1 "(n9) full ref with a slash in the branch name is enforced"
 
 # (o) Malformed input fails closed. Git always sends four fields; anything
 # else means the hook cannot tell what is being pushed. Protects: a main line
@@ -239,10 +255,10 @@ expect_rc 2 "(o5) line with 5 fields -> error"
 run_hook accept "$NL$FEAT$NL$NL"
 expect_rc 0 "(o6) blank lines are ignored"
 
-# (p) CRLF line endings. Protects: the  strip - without it remote_sha is
-# `<sha>`, the range cannot be computed, and the hook errors instead of
+# (p) CRLF line endings. Protects: the \r strip - without it remote_sha is
+# `<sha>\r`, the range cannot be computed, and the hook errors instead of
 # judging coverage.
-run_hook reject "$MAIN"$''"$NL"
+run_hook reject "$MAIN"$'\r'"$NL"
 expect_rc 1 "(p) CRLF-terminated main line, uncovered -> rejected"
 # A CRLF blank line is still just a blank line. Protects: blank-line skipping
 # under CRLF (a bare carriage return must not be read as a one-field line).
@@ -261,6 +277,14 @@ expect_rc 2 "(q) missing coverage tool -> error"
 # rather than an unconditional block.
 run_hook accept "(delete) $ZERO refs/heads/main $head$NL" BYPASS_CSAE=1
 expect_rc 0 "(r) BYPASS_CSAE=1 allows deletion of the protected ref"
+# BYPASS_CSAE=1 does NOT override input/configuration errors, which are
+# decided before the bypass is consulted. Protects: the documented split
+# (bypass skips coverage, deletion, mirror and tool checks; it never turns a
+# broken configuration or unreadable input into an allow).
+run_hook reject "$MAIN$NL" BYPASS_CSAE=1 CSAE_PROTECTED_REF=refs/tags/main
+expect_rc 2 "(r2) BYPASS_CSAE=1 does not override a bad CSAE_PROTECTED_REF"
+run_hook reject "refs/heads/main $head refs/heads/main$NL" BYPASS_CSAE=1
+expect_rc 2 "(r3) BYPASS_CSAE=1 does not override a malformed input line"
 
 # (m) Existing exit-code contract: with a protected update, a missing audit
 # mirror is an error (2), never a silent accept.
