@@ -29,10 +29,13 @@ hook reads every line and checks every update to the protected ref
 (`refs/heads/main`, or `CSAE_PROTECTED_REF`), wherever it appears in the list.
 Uncovered commits from all of those updates are pooled and the push is
 accepted or rejected once. Updates to other refs are not checked. `CSAE_PROTECTED_REF`
-takes a branch name (`main`) or a full ref (`refs/heads/main`); any other value
+takes a branch name without a slash (`main`) or a full ref (`refs/heads/main`,
+`refs/heads/release/1.0`); any other value (`origin/main`, `heads/main`, a tag)
 is a configuration error (exit 2), as is an input line that does not have four
-fields. Deleting the protected ref is rejected (`BYPASS_CSAE=1` overrides it, as
-it does every other check).
+fields. Deleting the protected ref is rejected. `BYPASS_CSAE=1` skips the
+coverage check, the deletion rejection and the audit-mirror and coverage-tool
+checks; it does not override an invalid `CSAE_PROTECTED_REF` or a malformed
+input line, which still exit 2.
 
 When the protected ref is created, only commits not already reachable from the
 pushed remote's remote-tracking refs are checked. Otherwise a new ref would
