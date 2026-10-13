@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+- `templates/validator-hook.sh` read only the first line of the pre-push input, so a multi-ref push (for example `git push origin feature main`) whose first input line was not the main ref skipped the main-branch coverage check and accepted an uncovered main update (git orders the lines by the remote's ref listing, not by argument order). The hook now reads every line, checks every update to the protected ref (`CSAE_PROTECTED_REF`, a branch name or full ref, default `refs/heads/main`; any other value exits 2), pools uncovered commits and decides once. A malformed input line (not exactly four fields) exits 2. Deletion of the protected ref is rejected (still bypassable with `BYPASS_CSAE=1`); creation checks only commits not already reachable from the remote's tracking refs; the commit-count message no longer reports 1 for an empty range.
+
+### Added
+- `tests/test-validator-hook.sh`, wired into the `smoke` workflow: multi-ref, deletion, creation, bypass and custom-protected-ref cases.
+
+### Documentation
+- README and PROTOCOL state that the coverage tool (`csae-verify`) is an external dependency the adopter must supply, and describe the multi-ref semantics.
+
 ## [0.2.0] - 2026-06-19
 
 Three protocol-level integrity properties added on top of the core loop - detached-mirror publishing, closure-SHA canonical binding, and the no-vacuous-attestation floor - plus the previously-unreleased vs-alternatives column. Additive throughout (no breaking changes to the bundle schema, validator semantics, or recovery procedures); minor version bump per SemVer.
@@ -74,7 +83,7 @@ Initial draft release. Private - pending outside review, walkthrough example, te
 - `templates/` directory
 
 ### Context
-One of a series of methodology pieces from ORCA - Orchestrated Reasoning for Civil Action. Composes with [Russian Judge](https://github.com/moranbickel/russian-judge) (adversarial review) and [Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence) (topology convergence). Together the three form an attestation triangle covering review-substance + commit-topology + chain-of-custody.
+One of a series of methodology pieces. Composes with [Russian Judge](https://github.com/moranbickel/russian-judge) (adversarial review) and [Peer-Worker Convergence](https://github.com/moranbickel/peer-worker-convergence) (topology convergence). Together the three form an attestation triangle covering review-substance + commit-topology + chain-of-custody.
 
 Authored at Path A discipline level: methodology + workflow + invariants, no specific cryptographic-substrate recommendations. Point at [in-toto](https://in-toto.io), [Sigstore](https://www.sigstore.dev), and [SLSA](https://slsa.dev) for primitive layer.
 

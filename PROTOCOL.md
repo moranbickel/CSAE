@@ -189,9 +189,13 @@ The validator runs on push to canonical main (as a pre-push hook, a CI required 
 
 **Output:** push succeeds (validator accepts) or push fails (validator rejects with diagnostic).
 
+**Multi-ref pushes:** a pre-push hook receives one input line per ref being pushed. The validator MUST inspect every line, not only the first: every update whose remote ref is the protected canonical ref is checked, uncovered commits are pooled across all such updates, and the accept/reject decision is made once over the pool. Updates to other refs do not affect the verdict. Deleting the protected ref is rejected (no bundle can cover it); creating it checks the commits not already reachable from the remote's tracking refs. That creation rule is a deliberate trade-off: a new ref has no base to subtract, and checking the whole history would demand coverage for everything that predates adoption. The consequence is that a commit first pushed to an unprotected branch (never checked) is not checked again when the protected branch is created from it; an adopter who needs full-history coverage at creation runs the verifier over the whole history first. An input line that does not have exactly four fields is an error, not an allow.
+
+**Coverage tool:** the per-commit coverage and chain-integrity check is performed by an external verifier (`csae-verify` in the commands below). This repository documents its contract but does not ship an implementation; the adopter supplies one.
+
 **Performance:** chain-integrity verification is O(N) in the number of bundles in the chain. For projects with long chains, cache verified-chain state at the audit-mirror level (the verifier doesn't need to re-walk the full chain on every push; it walks back to the last verified state).
 
-**Bypass:** an environment-variable-mediated bypass (intentionally awkward; not a CLI flag) allows pushes without bundle coverage. Bypass invocations produce a bypass-record commit on the audit mirror that names the bypassed commits, the operator, the rationale, and the timestamp. The bypass-record is itself an audit-chain entry.
+**Bypass:** an environment-variable-mediated bypass (intentionally awkward; not a CLI flag) allows pushes without bundle coverage. The reference hook prints a warning and allows the push; it writes nothing. The operator records the bypass (the bypassed commits, the operator, the rationale, the timestamp) as a bypass-record commit on the audit mirror, which is itself an audit-chain entry. The bypass covers every push that updates the protected ref, including deleting it.
 
 ---
 
