@@ -5,7 +5,8 @@
 #   <local_ref> <local_sha> <remote_ref> <remote_sha>
 # so `git push origin feature main` sends a feature line and a main line. The
 # hook must inspect every line, not just the first. These tests drive the hook
-# directly with hand-built stdin (LF line endings only, never CRLF) against a
+# directly with hand-built stdin (LF line endings, except the one CRLF test)
+# against a
 # throwaway git repo, a throwaway audit-mirror directory, and stub coverage
 # tools placed on PATH:
 #   - a stub that rejects every commit
@@ -158,15 +159,30 @@ g -C "$repo" update-ref -d refs/remotes/origin/other
 run_hook reject "$FEAT$NL$MAIN$NL" BYPASS_CSAE=1
 expect_rc 0 "(h) BYPASS_CSAE=1 -> allowed"
 
-# (i) Accumulation across protected updates: two lines name the protected ref
-# (unusual, but the hook must decide once over all of them); only the commit
-# in the SECOND line is uncovered. Protects: a verdict overwritten by the last
-# line, or taken from the first, instead of accumulated.
+# (i) Accumulation across protected updates. Two lines name the protected ref
+# (git push cannot normally produce this, but the hook must decide once over
+# all of them). Protects, as a pair: a verdict taken from the FIRST protected
+# line only (i1: uncovered commit only in the later line) and a verdict
+# overwritten by the LAST protected line (i2: uncovered commit only in the
+# earlier line, covered commit in the later one). Either implementation passes
+# one of the two and fails the other.
 run_hook select "refs/heads/main $base refs/heads/main $ZERO$NL$MAIN$NL" STUB_REJECT="$head"
-expect_rc 1 "(i) uncovered commit only in the later protected line -> rejected"
+expect_rc 1 "(i1) uncovered commit only in the later protected line -> rejected"
 case "$LAST_ERR" in
-  *"$head"*) pass "(i) diagnostic names the uncovered commit" ;;
-  *) fail "(i) diagnostic does not name $head; stderr: $LAST_ERR" ;;
+  *"$head"*) pass "(i1) diagnostic names the uncovered commit" ;;
+  *) fail "(i1) diagnostic does not name $head; stderr: $LAST_ERR" ;;
+esac
+run_hook select "$MAIN$NL""refs/heads/main $base refs/heads/main $ZERO$NL" STUB_REJECT="$head"
+expect_rc 1 "(i2) uncovered commit only in the earlier protected line -> rejected"
+
+# (i3) De-duplication. The same protected update twice must list the
+# uncovered commit once. Protects: the pooled list is a set; without it the
+# diagnostic and the count double, and coverage is queried repeatedly.
+run_hook reject "$MAIN$NL$MAIN$NL"
+expect_rc 1 "(i3) duplicate protected line -> rejected"
+case "$LAST_ERR" in
+  *"REJECTED - 1 commit(s)"*) pass "(i3) duplicate commit counted once" ;;
+  *) fail "(i3) duplicate commit not de-duplicated; stderr: $LAST_ERR" ;;
 esac
 
 # (j) Empty stdin: nothing is being pushed.
@@ -185,6 +201,66 @@ expect_rc 0 "(k2) custom protected ref set, main line not protected -> allowed"
 # `while read` loop does not drop an unterminated last line.
 run_hook reject "$MAIN"
 expect_rc 1 "(l) main line without trailing newline -> rejected"
+
+# (n) CSAE_PROTECTED_REF accepts a short branch name. Protects: an adopter who
+# writes the obvious `CSAE_PROTECTED_REF=main` must get enforcement, not a
+# silently disabled hook (the value used to be compared verbatim to the full
+# ref git sends, so a short name matched nothing and every push was allowed).
+run_hook reject "$MAIN$NL" CSAE_PROTECTED_REF=main
+expect_rc 1 "(n1) CSAE_PROTECTED_REF=main (short name), uncovered -> rejected"
+run_hook reject "$REL$NL" CSAE_PROTECTED_REF=release
+expect_rc 1 "(n2) CSAE_PROTECTED_REF=release (short name), release uncovered -> rejected"
+run_hook reject "$MAIN$NL" CSAE_PROTECTED_REF=release
+expect_rc 0 "(n3) CSAE_PROTECTED_REF=release (short name), main line -> not protected"
+# A value that is not a branch ref is a configuration error (2), never a
+# silent allow-all. Protects: fail-closed configuration; a typo like a tag ref
+# or an empty branch name cannot disable the hook.
+run_hook reject "$MAIN$NL" CSAE_PROTECTED_REF=refs/tags/main
+expect_rc 2 "(n4) CSAE_PROTECTED_REF=refs/tags/main -> configuration error"
+run_hook reject "$MAIN$NL" CSAE_PROTECTED_REF=refs/heads/
+expect_rc 2 "(n5) CSAE_PROTECTED_REF=refs/heads/ (empty branch) -> configuration error"
+run_hook reject "" CSAE_PROTECTED_REF=refs/tags/main
+expect_rc 2 "(n6) bad CSAE_PROTECTED_REF is an error even with empty stdin"
+
+# (o) Malformed input fails closed. Git always sends four fields; anything
+# else means the hook cannot tell what is being pushed. Protects: a main line
+# missing its remote_sha used to produce an empty range and an ACCEPT.
+run_hook reject "refs/heads/main $head refs/heads/main$NL"
+expect_rc 2 "(o1) protected line with 3 fields -> error"
+run_hook reject "refs/heads/main $head$NL"
+expect_rc 2 "(o2) line with 2 fields -> error"
+run_hook reject "$FEAT$NL""refs/heads/main refs/heads/main $base$NL"
+expect_rc 2 "(o3) malformed line after a valid non-protected line -> error"
+run_hook accept "refs/heads/feature $head refs/heads/feature$NL$MAIN$NL"
+expect_rc 2 "(o4) malformed NON-protected line -> error (any line)"
+run_hook reject "$MAIN extra$NL"
+expect_rc 2 "(o5) line with 5 fields -> error"
+# Blank lines carry no ref and are skipped, not treated as malformed.
+run_hook accept "$NL$FEAT$NL$NL"
+expect_rc 0 "(o6) blank lines are ignored"
+
+# (p) CRLF line endings. Protects: the  strip - without it remote_sha is
+# `<sha>`, the range cannot be computed, and the hook errors instead of
+# judging coverage.
+run_hook reject "$MAIN"$''"$NL"
+expect_rc 1 "(p) CRLF-terminated main line, uncovered -> rejected"
+# A CRLF blank line is still just a blank line. Protects: blank-line skipping
+# under CRLF (a bare carriage return must not be read as a one-field line).
+run_hook accept $'\r'"$NL""$FEAT"$'\r'"$NL"
+expect_rc 0 "(p2) CRLF blank line and CRLF feature line -> allowed"
+
+# (q) Coverage tool missing is an error (2), not a silent accept, when a
+# protected ref is being updated. Protects: fail-closed misconfiguration.
+run_hook accept "$MAIN$NL" CSAE_COVERAGE_TOOL=csae-verify-absent-xyz
+expect_rc 2 "(q) missing coverage tool -> error"
+
+# (r) Bypass and deletion. Kept behaviour: BYPASS_CSAE=1 allows everything
+# for a protected-ref push, deletion included (the rejection text itself tells
+# the operator to use the bypass for an intended deletion). Protects: that
+# documented contract; also that the deletion rejection really is bypassable
+# rather than an unconditional block.
+run_hook accept "(delete) $ZERO refs/heads/main $head$NL" BYPASS_CSAE=1
+expect_rc 0 "(r) BYPASS_CSAE=1 allows deletion of the protected ref"
 
 # (m) Existing exit-code contract: with a protected update, a missing audit
 # mirror is an error (2), never a silent accept.

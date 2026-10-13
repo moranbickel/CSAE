@@ -21,18 +21,30 @@
 # (`git push origin feature main` sends two lines). The hook reads EVERY
 # line, checks every update whose remote ref is the protected ref, pools the
 # uncovered commits across all of them, and decides once at the end. Updates
-# to other refs are not checked, whatever their position in the input.
+# to other refs are not checked, whatever their position in the input. A
+# non-blank input line that does not have exactly four fields is malformed and
+# fails closed (exit 2), whatever ref it names.
 #
 # Exit codes:
 #   0 - push allowed (all commits covered, or no protected ref is updated)
 #   1 - push rejected (uncovered commits, or deletion of the protected ref)
 #   2 - error (audit mirror unreachable, coverage tool missing, commit
-#       range cannot be computed, configuration broken)
+#       range cannot be computed, malformed input line, configuration broken)
 #
 # Bypass: BYPASS_CSAE=1 in environment allows push without coverage check.
 # The bypass is intentionally awkward (env var, not a CLI flag); routine
 # use erodes the discipline. If you find yourself bypassing often, the
 # protocol isn't fitting the work - investigate, don't keep bypassing.
+# The bypass covers every push that updates the protected ref, deletion of it
+# included. The hook only prints a warning; it writes no record - recording
+# the rationale (and any audit-mirror entry) is a manual follow-up.
+#
+# Configuration:
+#   CSAE_AUDIT_MIRROR    path of the audit-mirror repo (default ../audit-mirror)
+#   CSAE_COVERAGE_TOOL   coverage tool to run (default csae-verify)
+#   CSAE_PROTECTED_REF   protected branch: a full ref (refs/heads/main) or a
+#                        short branch name (main, taken as refs/heads/main).
+#                        Anything that is not a branch ref is exit 2.
 
 set -euo pipefail
 
@@ -40,6 +52,17 @@ set -euo pipefail
 AUDIT_MIRROR_REPO="${CSAE_AUDIT_MIRROR:-../audit-mirror}"
 COVERAGE_TOOL="${CSAE_COVERAGE_TOOL:-csae-verify}"
 PROTECTED_REF="${CSAE_PROTECTED_REF:-refs/heads/main}"
+
+# Git sends full refs, so a short branch name must be expanded or it would
+# match nothing and silently disable the hook. A value that is still not a
+# branch ref (a tag, an empty name) is a configuration error, never an allow.
+if [[ "$PROTECTED_REF" != refs/* ]]; then
+  PROTECTED_REF="refs/heads/$PROTECTED_REF"
+fi
+if [[ "$PROTECTED_REF" != refs/heads/?* ]]; then
+  echo "csae-validator: ERROR - CSAE_PROTECTED_REF must name a branch (main or refs/heads/main); got '${CSAE_PROTECTED_REF:-}'." >&2
+  exit 2
+fi
 
 # Git passes the remote name (or URL) as $1 to a pre-push hook.
 REMOTE_NAME="${1:-}"
@@ -55,8 +78,16 @@ is_zero() { [[ "$1" =~ ^0+$ ]]; }
 # swallow the remaining lines.
 PROTECTED_UPDATES=()
 DELETES_PROTECTED=0
-while read -r local_ref local_sha remote_ref remote_sha || [[ -n "${local_ref:-}" ]]; do
-  remote_sha="${remote_sha%$'\r'}"
+while IFS= read -r line || [[ -n "$line" ]]; do
+  line="${line%$'\r'}" # tolerate CRLF-terminated input
+  read -r local_ref local_sha remote_ref remote_sha extra <<<"$line"
+  # Blank line: no ref, nothing to check.
+  [[ -n "$local_ref" ]] || continue
+  # Exactly four fields, or the hook cannot tell what is being pushed.
+  if [[ -z "$local_sha" || -z "$remote_ref" || -z "$remote_sha" || -n "$extra" ]]; then
+    echo "csae-validator: ERROR - malformed pre-push input line (expected '<local_ref> <local_sha> <remote_ref> <remote_sha>'): $line" >&2
+    exit 2
+  fi
   [[ "$remote_ref" == "$PROTECTED_REF" ]] || continue
   if is_zero "$local_sha"; then
     DELETES_PROTECTED=1

@@ -28,9 +28,19 @@ On a push that updates several refs, Git sends the hook one line per ref. The
 hook reads every line and checks every update to the protected ref
 (`refs/heads/main`, or `CSAE_PROTECTED_REF`), wherever it appears in the list.
 Uncovered commits from all of those updates are pooled and the push is
-accepted or rejected once. Updates to other refs are not checked. Deleting the
-protected ref is always rejected, and creating it checks only commits not
-already reachable from the remote's tracking refs. Tests:
+accepted or rejected once. Updates to other refs are not checked. `CSAE_PROTECTED_REF`
+takes a branch name (`main`) or a full ref (`refs/heads/main`); any other value
+is a configuration error (exit 2), as is an input line that does not have four
+fields. Deleting the protected ref is rejected (`BYPASS_CSAE=1` overrides it, as
+it does every other check).
+
+When the protected ref is created, only commits not already reachable from the
+pushed remote's remote-tracking refs are checked. Otherwise a new ref would
+demand coverage for the entire history, including everything that predates
+adoption. The consequence: a commit first pushed to an unprotected branch (which
+is never checked) is not checked again when the protected branch is created from
+it. If you need full-history coverage at creation, run your coverage tool over
+the whole history before creating the ref. Tests:
 `bash tests/test-validator-hook.sh`.
 
 Synthetic example of the problem:
